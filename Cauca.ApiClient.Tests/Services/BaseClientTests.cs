@@ -1,11 +1,8 @@
-﻿using System;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Exceptions;
 using Cauca.ApiClient.Tests.Mocks;
-using FluentAssertions;
 using Flurl.Http.Testing;
 using NUnit.Framework;
 

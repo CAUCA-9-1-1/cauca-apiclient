@@ -4,16 +4,20 @@ using Cauca.ApiClient.Exceptions;
 using Cauca.ApiClient.Extensions;
 using Flurl;
 using Flurl.Http;
+using Polly;
 
 namespace Cauca.ApiClient.Services
 {
     public class RefreshTokenHandler
     {
+        private readonly IAsyncPolicy retryPolicy;
+
         protected IConfiguration Configuration { get; set; }
 
-        public RefreshTokenHandler(IConfiguration configuration)
+        public RefreshTokenHandler(IConfiguration configuration, IAsyncPolicy policy)
         {
             Configuration = configuration;
+            retryPolicy = policy;
         }
 
         private Url GenerateRefreshRequest()
@@ -55,9 +59,9 @@ namespace Cauca.ApiClient.Services
 
             try
             {
-                var response = await request
+                var response = await retryPolicy.ExecuteAsync(() => request
                     .PostJsonAsync(GetLoginBody())
-                    .ReceiveJson<LoginResult>();
+                    .ReceiveJson<LoginResult>());
                 return response;
             }
             catch (FlurlHttpException exception)
@@ -85,9 +89,9 @@ namespace Cauca.ApiClient.Services
 
             try
             {
-                var response = await request
+                var response = await retryPolicy.ExecuteAsync(() => request
                     .PostJsonAsync(GetRefreshTokenBody())
-                    .ReceiveJson<TokenRefreshResult>();
+                    .ReceiveJson<TokenRefreshResult>());
                 return response.AccessToken;
             }
             catch (FlurlHttpException exception)

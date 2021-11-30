@@ -11,8 +11,8 @@ namespace Cauca.ApiClient.Services
         : BaseService<TConfiguration> 
         where TConfiguration : IConfiguration
     {
-        protected BaseSecureService(TConfiguration configuration) 
-            : base(configuration)
+        protected BaseSecureService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null) 
+            : base(configuration, policyBuilder)
         {
         }
 
@@ -51,13 +51,13 @@ namespace Cauca.ApiClient.Services
         protected async Task LoginWhenLoggedOut()
         {
             if (string.IsNullOrWhiteSpace(Configuration.AccessToken))
-                await new RefreshTokenHandler(Configuration)
+                await new RefreshTokenHandler(Configuration, RetryPolicy)
                     .Login();
         }
 
         private async Task<TResult> RefreshTokenThenRetry<TResult>(Func<Task<TResult>> action)
         {
-            await new RefreshTokenHandler(Configuration)
+            await new RefreshTokenHandler(Configuration, RetryPolicy)
                 .RefreshToken();
             return await action();
         }
