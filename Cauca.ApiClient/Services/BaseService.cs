@@ -6,17 +6,21 @@ using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Services.Interfaces;
 using Flurl;
 using Flurl.Http;
+using Polly;
 
 namespace Cauca.ApiClient.Services
 {
     public abstract class BaseService<TConfiguration> : IBaseService
         where TConfiguration : IConfiguration
     {
+        protected IAsyncPolicy RetryPolicy;
         protected TConfiguration Configuration { get; set; }
+        protected virtual int MaxRetryAttemptOnTransientFailure { get; } = 3;
 
-        protected BaseService(TConfiguration configuration)
+        protected BaseService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null)
         {
             Configuration = configuration;
+            RetryPolicy = (policyBuilder ?? new RetryPolicyBuilder()).BuildRetryPolicy(MaxRetryAttemptOnTransientFailure);
         }
 
         public async Task<TResult> PostAsync<TResult>(string url, object entity)
@@ -96,8 +100,7 @@ namespace Cauca.ApiClient.Services
 
         protected async Task ExecutePostAsync(IFlurlRequest request, object entity)
         {
-            await request
-                .PostJsonAsync(entity);
+            await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity));
         }
 
         protected async Task<TResult> ExecutePostAsync<TResult>(IFlurlRequest request, object entity)
@@ -105,23 +108,23 @@ namespace Cauca.ApiClient.Services
             var type = typeof(TResult);
             if (type == typeof(string))
             {
-                var response = await request
+                var response = await RetryPolicy.ExecuteAsync(() => request
                     .PostJsonAsync(entity)
-                    .ReceiveString();
+                    .ReceiveString());
                 return (TResult)Convert.ChangeType(response, typeof(TResult));
             }
             else if (type == typeof(bool))
             {
-                var response = await request
+                var response = await RetryPolicy.ExecuteAsync(() => request
                     .PostJsonAsync(entity)
-                    .ReceiveString() == "TRUE";
+                    .ReceiveString()) == "TRUE";
                 return (TResult)Convert.ChangeType(response, typeof(TResult));
             }
             else if (type == typeof(int))
             {
-                var response = await request
+                var response = await RetryPolicy.ExecuteAsync(() => request
                     .PostJsonAsync(entity)
-                    .ReceiveString();
+                    .ReceiveString());
                 if (int.TryParse(response, out int result))
                 {
                     return (TResult)Convert.ChangeType(result, typeof(TResult));
@@ -131,9 +134,9 @@ namespace Cauca.ApiClient.Services
             }
             else
             {
-                return await request
+                return await RetryPolicy.ExecuteAsync(() => request
                     .PostJsonAsync(entity)
-                    .ReceiveJson<TResult>();
+                    .ReceiveJson<TResult>());
             }
         }
 
@@ -142,17 +145,17 @@ namespace Cauca.ApiClient.Services
             var type = typeof(TResult);
             if (type == typeof(string))
             {
-                var response = await request.GetStringAsync();
+                var response = await RetryPolicy.ExecuteAsync(() => request.GetStringAsync());
                 return (TResult) Convert.ChangeType(response, typeof(TResult));
             }
             else if (type == typeof(bool))
             {
-                var response = (await request.GetStringAsync()).ToUpper() == "TRUE";
+                var response = (await RetryPolicy.ExecuteAsync(() => request.GetStringAsync())).ToUpper() == "TRUE";
                 return (TResult)Convert.ChangeType(response, typeof(TResult));
             }
             else if (type == typeof(int))
             {
-                var response = await request.GetStringAsync();
+                var response = await RetryPolicy.ExecuteAsync(() => request.GetStringAsync());
                 if (int.TryParse(response, out int result))
                 {
                     return (TResult)Convert.ChangeType(result, typeof(TResult));
@@ -162,38 +165,38 @@ namespace Cauca.ApiClient.Services
             }
             else
             {
-                return await request
-                    .GetJsonAsync<TResult>();
+                return await RetryPolicy.ExecuteAsync(() => request
+                    .GetJsonAsync<TResult>());
             }
         }
 
         protected async Task<Stream> ExecuteGetStreamAsync(IFlurlRequest request)
         {
-            return await request.GetStreamAsync();
+            return await RetryPolicy.ExecuteAsync(() => request.GetStreamAsync());
         }
 
         protected async Task<string> ExecuteGetStringAsync(IFlurlRequest request)
         {
-            return await request.GetStringAsync();
+            return await RetryPolicy.ExecuteAsync(() => request.GetStringAsync());
         }
 
         protected async Task<byte[]> ExecuteGetBytesAsync(IFlurlRequest request)
         {
-            return await request.GetBytesAsync();
+            return await RetryPolicy.ExecuteAsync(() => request.GetBytesAsync());
         }
 
         protected async Task<TResult> ExecutePutAsync<TResult>(IFlurlRequest request, object entity)
         {
-            return await request
+            return await RetryPolicy.ExecuteAsync(() => request
                 .PutJsonAsync(entity)
-                .ReceiveJson<TResult>();
+                .ReceiveJson<TResult>());
         }
 
         protected async Task<TResult> ExecuteDeleteAsync<TResult>(IFlurlRequest request)
         {
-            return await request
+            return await RetryPolicy.ExecuteAsync(() => request
                 .DeleteAsync()
-                .ReceiveJson<TResult>();
-        }
+                .ReceiveJson<TResult>());
+        } 
     }
 }

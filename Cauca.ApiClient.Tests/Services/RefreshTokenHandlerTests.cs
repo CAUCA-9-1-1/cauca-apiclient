@@ -4,6 +4,7 @@ using Cauca.ApiClient.Services;
 using Cauca.ApiClient.Tests.Mocks;
 using Flurl.Http.Testing;
 using NUnit.Framework;
+using Polly;
 
 namespace Cauca.ApiClient.Tests.Services
 {
@@ -11,10 +12,14 @@ namespace Cauca.ApiClient.Tests.Services
     public class RefreshTokenHandlerTests
     {
         private IConfiguration configuration;
+        private IAsyncPolicy noRetryPolicy;
+        private RefreshTokenHandler tokenHandler;
 
         [SetUp]
         public void SetupTest()
         {
+            noRetryPolicy = new InstantRetryBuilder().BuildRetryPolicy(0);
+
             configuration = new MockConfiguration
             {
                 ApiBaseUrl = "http://test",
@@ -23,6 +28,8 @@ namespace Cauca.ApiClient.Tests.Services
                 AuthorizationType = "bearer",
                 UseExternalSystemLogin = false
             };
+
+            tokenHandler = new RefreshTokenHandler(configuration, noRetryPolicy);
         }
 
         [TestCase(true, "http://test/Authentication/refreshforexternalsystem")]
@@ -32,7 +39,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new TokenRefreshResult());
             configuration.UseExternalSystemLogin = useExternalSystem;
-            var tokenHandler = new RefreshTokenHandler(configuration);
+            
             await tokenHandler.RefreshToken();
 
             httpTest.ShouldHaveCalled(urlThatShouldHaveBeenCalled);
@@ -45,8 +52,7 @@ namespace Cauca.ApiClient.Tests.Services
             configuration.ApiBaseUrlForAuthentication = null;
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(loginResult);
-            var tokenHandler = new RefreshTokenHandler(configuration);
-            
+
             await tokenHandler.Login();
 
             httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrl}/Authentication/logon");
@@ -60,7 +66,6 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(loginResult);
 
-            var tokenHandler = new RefreshTokenHandler(configuration);
             await tokenHandler.Login();
 
             httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrlForAuthentication}/Authentication/logon");
@@ -70,10 +75,9 @@ namespace Cauca.ApiClient.Tests.Services
         public async Task NewAccessTokenIsCorrectlyCopiedInTheCurrentConfiguration()
         {
             var newToken = "newtoken";
-
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new TokenRefreshResult { AccessToken = newToken });
-            var tokenHandler = new RefreshTokenHandler(configuration);
+
             await tokenHandler.RefreshToken();
 
             Assert.AreEqual(newToken, configuration.AccessToken);
@@ -84,7 +88,7 @@ namespace Cauca.ApiClient.Tests.Services
         {
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new TokenRefreshResult(), 404);
-            var tokenHandler = new RefreshTokenHandler(configuration);
+            
             await tokenHandler.RefreshToken();
 
             Assert.IsNull(configuration.AccessToken);
