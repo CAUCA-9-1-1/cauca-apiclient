@@ -13,11 +13,11 @@ namespace Cauca.ApiClient.Services
             if (code == HttpStatusCode.BadRequest)
                 throw new BadParameterApiException(url, exception);
             if (code == HttpStatusCode.Unauthorized)
-                throw new UnauthorizedApiException(url);
+                throw new UnauthorizedApiException(url, exception);
             if (code == HttpStatusCode.Forbidden)
-                throw new ForbiddenApiException(url);
+                throw new ForbiddenApiException(url, exception);
             if (code == HttpStatusCode.InternalServerError)
-                throw new InternalErrorApiException(url);
+                throw new InternalErrorApiException(url, exception);
             if (!answerReceived)
                 throw new NoResponseApiException(exception);
             throw exception;

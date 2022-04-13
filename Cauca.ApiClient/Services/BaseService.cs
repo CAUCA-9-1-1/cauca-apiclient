@@ -6,6 +6,7 @@ using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Services.Interfaces;
 using Flurl;
 using Flurl.Http;
+using Flurl.Http.Content;
 using Polly;
 
 namespace Cauca.ApiClient.Services
@@ -43,9 +44,19 @@ namespace Cauca.ApiClient.Services
             return await ExecuteAsync(() => ExecuteDeleteAsync<TResult>(GenerateRequest(url)));
         }
 
+        public async Task DeleteAsync(string url)
+        {
+            await ExecuteAsync(() => ExecuteDeleteAsync(GenerateRequest(url)));
+        }
+
         public async Task<TResult> GetAsync<TResult>(string url)
         {
             return await ExecuteAsync(() => ExecuteGetAsync<TResult>(GenerateRequest(url)));
+        }
+
+        public async Task GetAsync(string url)
+        {
+            await ExecuteAsync(() => ExecuteGetAsync(GenerateRequest(url)));
         }
 
         public async Task<byte[]> GetBytesAsync(string url)
@@ -61,6 +72,28 @@ namespace Cauca.ApiClient.Services
         public async Task<string> GetStringAsync(string url)
         {
             return await ExecuteAsync(() => ExecuteGetStringAsync(GenerateRequest(url)));
+        }
+
+        protected async Task<T> PostFileAsync<T>(string url, string filename, Stream stream, string contentType)
+        {
+            stream.Position = 0;            
+            return await ExecuteAsync<T>(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType)));
+        }
+
+        protected async Task<T> PostFileAsync<T>(string url, string fileFullPath, string fileName)
+        {
+            return await ExecuteAsync<T>(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath)));
+        }
+
+        protected async Task PostFileAsync(string url, string filename, Stream stream, string contentType)
+        {
+            stream.Position = 0;
+            await ExecuteAsync(() => ExecutePostStreamAsync(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType)));
+        }
+
+        protected async Task PostFileAsync(string url, string fileFullPath, string fileName)
+        {
+            await ExecuteAsync(() => ExecutePostStreamAsync(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath)));
         }
 
         protected virtual async Task<TResult> ExecuteAsync<TResult>(Func<Task<TResult>> request)
@@ -170,6 +203,12 @@ namespace Cauca.ApiClient.Services
             }
         }
 
+        protected async Task ExecuteGetAsync(IFlurlRequest request)
+        {
+            await RetryPolicy.ExecuteAsync(() => request
+                .GetAsync());
+        }
+
         protected async Task<Stream> ExecuteGetStreamAsync(IFlurlRequest request)
         {
             return await RetryPolicy.ExecuteAsync(() => request.GetStreamAsync());
@@ -197,6 +236,26 @@ namespace Cauca.ApiClient.Services
             return await RetryPolicy.ExecuteAsync(() => request
                 .DeleteAsync()
                 .ReceiveJson<TResult>());
-        } 
+        }
+
+
+        protected async Task ExecuteDeleteAsync(IFlurlRequest request)
+        {
+            await RetryPolicy.ExecuteAsync(() => request
+                .DeleteAsync());
+        }
+
+        protected async Task<TResult> ExecutePostStreamAsync<TResult>(IFlurlRequest request, Action<CapturedMultipartContent> action)
+        {
+            return await request
+                .PostMultipartAsync(action)
+                .ReceiveJson<TResult>();
+        }
+
+        protected async Task ExecutePostStreamAsync(IFlurlRequest request, Action<CapturedMultipartContent> action)
+        {
+            await request
+                .PostMultipartAsync(action);
+        }
     }
 }

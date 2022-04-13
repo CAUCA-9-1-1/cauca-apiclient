@@ -48,6 +48,27 @@ namespace Cauca.ApiClient.Services
             }
         }
 
+        protected override async Task ExecuteAsync(Func<Task> request)
+        {
+            await LoginWhenLoggedOut();
+            try
+            {
+                await request();
+            }
+            catch (FlurlHttpException exception)
+            {
+                if (exception.Call.AccessTokenIsExpired())
+                {
+                    await RefreshTokenThenRetry(request);
+                }
+
+                new RestResponseValidator()
+                    .ThrowExceptionForStatusCode(exception.Call.Request.Url, exception.Call.Succeeded,
+                        (HttpStatusCode?)exception.Call.Response?.StatusCode, exception);
+                throw;
+            }
+        }
+
         protected async Task LoginWhenLoggedOut()
         {
             if (string.IsNullOrWhiteSpace(Configuration.AccessToken))
@@ -60,6 +81,12 @@ namespace Cauca.ApiClient.Services
             await new RefreshTokenHandler(Configuration, RetryPolicy)
                 .RefreshToken();
             return await action();
+        }
+        private async Task RefreshTokenThenRetry(Func<Task> action)
+        {
+            await new RefreshTokenHandler(Configuration, RetryPolicy)
+                .RefreshToken();
+            await action();
         }
     }
 }
