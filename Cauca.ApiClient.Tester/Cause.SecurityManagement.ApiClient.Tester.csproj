@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cause.SecurityMangement.ApiClient\Cauca.ApiClient.csproj" />
+    <ProjectReference Include="..\Cauca.ApiClient\Cauca.ApiClient.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Services;
@@ -27,9 +28,16 @@ namespace Cause.SecurityManagement.ApiClient.Tester
             };
 
             using var httpTest = new HttpTest();
-            httpTest.RespondWith("farlouche");
+            httpTest.SimulateTimeout();
+            httpTest.SimulateException(new Exception("fake exception"));
+            httpTest.RespondWith(() =>
+            {
+                Thread.Sleep(20000);
+                return new StringContent("farlouche");
+            });
 
             var response = await service.GetWhateve();
+            Console.WriteLine(response);
 
             /*httpTest.ShouldHaveCalled("http://test/yo")
                 .WithVerb(HttpMethod.Get)
@@ -112,6 +120,6 @@ namespace Cause.SecurityManagement.ApiClient.Tester
         public string AuthorizationType { get; set; }
         public string AccessToken { get; set; }
         public string RefreshToken { get; set; }
-        public int RequestTimeoutInSeconds { get; set; }
+        public int RequestTimeoutInSeconds { get; set; } = 5;
     }
 }

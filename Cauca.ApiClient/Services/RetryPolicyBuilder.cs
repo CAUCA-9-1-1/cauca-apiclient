@@ -26,7 +26,14 @@ namespace Cauca.ApiClient.Services
 
         private bool IsTransientOrTimeOut(FlurlHttpException exception)
         {
-            return IsTransientError(exception) || exception.Call.NoResponse();
+            if (IsTransientError(exception) || exception.Call.NoResponse())
+            {
+                var statusCode = exception.StatusCode.HasValue ? exception.StatusCode.Value : 0;
+                Console.WriteLine($"An exception append with status code: {statusCode} and it will be retry: {exception.Message}");
+                return true;
+            }
+
+            return false;
         }
 
         private bool IsTransientError(FlurlHttpException exception)

@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cauca.ApiClient", "Cauca.Ap
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cauca.ApiClient.Tests", "Cauca.ApiClient.Tests\Cauca.ApiClient.Tests.csproj", "{29B1FDA5-C865-48A6-B39A-D685B60A131B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cause.SecurityManagement.ApiClient.Tester", "Cauca.ApiClient.Tester\Cause.SecurityManagement.ApiClient.Tester.csproj", "{0EDD176F-DD61-42EF-9F64-FBB99D6EB3EE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{29B1FDA5-C865-48A6-B39A-D685B60A131B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{29B1FDA5-C865-48A6-B39A-D685B60A131B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{29B1FDA5-C865-48A6-B39A-D685B60A131B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EDD176F-DD61-42EF-9F64-FBB99D6EB3EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EDD176F-DD61-42EF-9F64-FBB99D6EB3EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EDD176F-DD61-42EF-9F64-FBB99D6EB3EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EDD176F-DD61-42EF-9F64-FBB99D6EB3EE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
