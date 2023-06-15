@@ -148,9 +148,9 @@ namespace Cauca.ApiClient.Services
             }
             else if (type == typeof(bool))
             {
-                var response = await RetryPolicy.ExecuteAsync(() => request
+                var response = (await RetryPolicy.ExecuteAsync(() => request
                     .PostJsonAsync(entity)
-                    .ReceiveString()) == "TRUE";
+                    .ReceiveString())).ToUpper() == "TRUE";
                 return (TResult)Convert.ChangeType(response, typeof(TResult));
             }
             else if (type == typeof(int))
