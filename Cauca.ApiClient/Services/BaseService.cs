@@ -69,6 +69,16 @@ namespace Cauca.ApiClient.Services
             return await ExecuteAsync(() => ExecuteGetStreamAsync(GenerateRequest(url)));
         }
 
+        public async Task<byte[]> PostAndReceiveBytesAsync(string url, object entity)
+        {
+            return await ExecuteAsync(() => ExecutePostAndReceiveBytesAsync(GenerateRequest(url), entity));
+        }
+
+        public async Task<Stream> PostAndReceiveStreamAsync(string url, object entity)
+        {
+            return await ExecuteAsync(() => ExecutePostAndReceiveStreamAsync(GenerateRequest(url), entity));
+        }
+
         public async Task<string> GetStringAsync(string url)
         {
             return await ExecuteAsync(() => ExecuteGetStringAsync(GenerateRequest(url)));
@@ -257,5 +267,16 @@ namespace Cauca.ApiClient.Services
             await request
                 .PostMultipartAsync(action);
         }
+
+        protected async Task<byte[]> ExecutePostAndReceiveBytesAsync(IFlurlRequest request, object entity)
+        {
+            return await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity).ReceiveBytes());
+        }
+
+        protected async Task<Stream> ExecutePostAndReceiveStreamAsync(IFlurlRequest request, object entity)
+        {
+            return await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity).ReceiveStream());
+        }
+
     }
 }
