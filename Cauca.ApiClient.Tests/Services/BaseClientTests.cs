@@ -19,17 +19,11 @@ namespace Cauca.ApiClient.Tests.Services
             configuration = new MockConfiguration
             {
                 ApiBaseUrl = "http://test/",
-                AccessToken = "Token",
-                RefreshToken = "RefreshToken",
-                AuthorizationType = "Mock"
             };
 
             configurationWithNoTrailingSlash = new MockConfiguration
             {
                 ApiBaseUrl = "http://test",
-                AccessToken = "Token",
-                RefreshToken = "RefreshToken",
-                AuthorizationType = "Mock"
             };
         }
 

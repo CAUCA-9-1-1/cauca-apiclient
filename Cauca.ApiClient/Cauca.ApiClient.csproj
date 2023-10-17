@@ -8,9 +8,9 @@
     <Copyright>2021</Copyright>
     <PackageProjectUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</RepositoryUrl>
-    <Version>1.5.8</Version>
-    <AssemblyVersion>1.5.8.0</AssemblyVersion>
-    <FileVersion>1.5.8.0</FileVersion>
+    <Version>1.6.0</Version>
+    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <FileVersion>1.6.0.0</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageReleaseNotes>Add inner exception to InvalidCredentionException.</PackageReleaseNotes>
   </PropertyGroup>

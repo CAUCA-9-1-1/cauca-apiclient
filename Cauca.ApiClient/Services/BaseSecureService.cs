@@ -11,6 +11,8 @@ namespace Cauca.ApiClient.Services
         : BaseService<TConfiguration> 
         where TConfiguration : IConfiguration
     {
+        public readonly AccessInformation AccessInformation = new AccessInformation();
+
         protected BaseSecureService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null) 
             : base(configuration, policyBuilder)
         {
@@ -24,7 +26,7 @@ namespace Cauca.ApiClient.Services
 
         protected string GetAuthorizationHeaderValue()
         {
-            return $"{Configuration.AuthorizationType} {Configuration.AccessToken}";
+            return $"{AccessInformation.AuthorizationType} {AccessInformation.AccessToken}";
         }
 
         protected override async Task<TResult> ExecuteAsync<TResult>(Func<Task<TResult>> request)
@@ -71,22 +73,30 @@ namespace Cauca.ApiClient.Services
 
         protected async Task LoginWhenLoggedOut()
         {
-            if (string.IsNullOrWhiteSpace(Configuration.AccessToken))
-                await new RefreshTokenHandler(Configuration, RetryPolicy)
+            if (string.IsNullOrWhiteSpace(AccessInformation.AccessToken))
+                await new RefreshTokenHandler(Configuration, AccessInformation, RetryPolicy)
                     .Login();
         }
 
         private async Task<TResult> RefreshTokenThenRetry<TResult>(Func<Task<TResult>> action)
         {
-            await new RefreshTokenHandler(Configuration, RetryPolicy)
+            await new RefreshTokenHandler(Configuration, AccessInformation, RetryPolicy)
                 .RefreshToken();
             return await action();
         }
         private async Task RefreshTokenThenRetry(Func<Task> action)
         {
-            await new RefreshTokenHandler(Configuration, RetryPolicy)
+            await new RefreshTokenHandler(Configuration, AccessInformation, RetryPolicy)
                 .RefreshToken();
             await action();
         }
+    }
+
+    public class AccessInformation
+    {
+        public string AuthorizationType { get; set; } = "";
+        public string AccessToken { get; set; } = "";
+        public string RefreshToken { get; set; } = "";
+
     }
 }

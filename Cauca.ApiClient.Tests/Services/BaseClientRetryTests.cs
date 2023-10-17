@@ -21,9 +21,6 @@ namespace Cauca.ApiClient.Tests.Services
             var configuration = new MockConfiguration
             {
                 ApiBaseUrl = "http://test/",
-                AccessToken = "Token",
-                RefreshToken = "RefreshToken",
-                AuthorizationType = "Mock"
             };
             service = new MockRepositoryWithRetries(configuration, builder);
         }

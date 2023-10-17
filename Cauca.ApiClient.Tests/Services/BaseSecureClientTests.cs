@@ -18,9 +18,6 @@ namespace Cauca.ApiClient.Tests.Services
             configuration = new MockConfiguration
             {
                 ApiBaseUrl = "http://test/",
-                AccessToken = "Token",
-                RefreshToken = "RefreshToken",
-                AuthorizationType = "Mock"
             };
         }
 
@@ -45,9 +42,6 @@ namespace Cauca.ApiClient.Tests.Services
         [TestCase]
         public async Task RequestLoginBeforeExecutingWhenNotLoggedIn()
         {
-            configuration.AccessToken = null;
-            configuration.RefreshToken = null;
-
             using (var httpTest = new HttpTest())
             {
                 httpTest
@@ -74,8 +68,6 @@ namespace Cauca.ApiClient.Tests.Services
         [TestCase]
         public async Task WithApiBaseUrlForAuthentication_RequestLoginBeforeExecutingWhenNotLoggedIn_ShouldBeExecutedWithUrlForAuthentication()
         {
-            configuration.AccessToken = null;
-            configuration.RefreshToken = null;
             configuration.ApiBaseUrlForAuthentication = "http://test-for-authentication";
 
             using (var httpTest = new HttpTest())
@@ -104,9 +96,6 @@ namespace Cauca.ApiClient.Tests.Services
         [TestCase]
         public async Task LoginCorrectlySetAccessAndRefreshToken()
         {
-            configuration.AccessToken = null;
-            configuration.RefreshToken = null;
-
             using (var httpTest = new HttpTest())
             {
                 httpTest
@@ -117,8 +106,8 @@ namespace Cauca.ApiClient.Tests.Services
                 var repo = new MockSecureRepository(configuration);
                 await repo.PostAsync<MockResponse>("mock", country);
 
-                Assert.AreEqual("NewRefreshToken", configuration.RefreshToken);
-                Assert.AreEqual("NewAccessToken", configuration.AccessToken);
+                Assert.AreEqual("NewRefreshToken", repo.AccessInformation.RefreshToken);
+                Assert.AreEqual("NewAccessToken", repo.AccessInformation.AccessToken);
             }
         }
 
@@ -133,7 +122,7 @@ namespace Cauca.ApiClient.Tests.Services
                     .RespondWithJson(new MockResponse());
 
                 var country = new MockEntity();
-                var repo = new MockSecureRepository(configuration);
+                var repo = CreateSecureRepository();
                 await repo.PostAsync<MockResponse>("mock", country);
 
                 httpTest.ShouldHaveCalled("http://test/mock")
@@ -167,7 +156,7 @@ namespace Cauca.ApiClient.Tests.Services
                     .RespondWithJson(new MockResponse());
 
                 var country = new MockEntity();
-                var repo = new MockSecureRepository(configuration);
+                var repo = CreateSecureRepository();
                 await repo.PostAsync<MockResponse>("mock", country);
 
                 httpTest.ShouldHaveCalled("http://test/mock")
@@ -200,7 +189,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new MockResponse(), 404);
             var entity = new MockEntity();
-            var repo = new MockSecureRepository(configuration);
+            var repo = CreateSecureRepository();
             Assert.ThrowsAsync<NotFoundApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
         }
 
@@ -210,7 +199,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new MockResponse(), 400);
             var entity = new MockEntity();
-            var repo = new MockSecureRepository(configuration);
+            var repo = CreateSecureRepository();
             Assert.ThrowsAsync<BadParameterApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
         }
 
@@ -220,7 +209,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new MockResponse(), 403);
             var entity = new MockEntity();
-            var repo = new MockSecureRepository(configuration);
+            var repo = CreateSecureRepository();
             Assert.ThrowsAsync<ForbiddenApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
         }
 
@@ -242,6 +231,15 @@ namespace Cauca.ApiClient.Tests.Services
             var entity = new MockEntity();
             var repo = new MockSecureRepository(configuration);
             Assert.ThrowsAsync<NoResponseApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
+        }
+
+        private MockSecureRepository CreateSecureRepository()
+        {
+            var repo = new MockSecureRepository(configuration);
+            repo.AccessInformation.AccessToken = "Token";
+            repo.AccessInformation.RefreshToken = "RefreshToken";
+            repo.AccessInformation.AuthorizationType = "Mock";
+            return repo;
         }
     }
 }

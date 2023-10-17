@@ -10,13 +10,15 @@ namespace Cauca.ApiClient.Services
 {
     public class RefreshTokenHandler
     {
+        private readonly AccessInformation accessInformation;
         private readonly IAsyncPolicy retryPolicy;
 
         protected IConfiguration Configuration { get; set; }
 
-        public RefreshTokenHandler(IConfiguration configuration, IAsyncPolicy policy)
+        public RefreshTokenHandler(IConfiguration configuration, AccessInformation accessInformation, IAsyncPolicy policy)
         {
             Configuration = configuration;
+            this.accessInformation = accessInformation;
             retryPolicy = policy;
         }
 
@@ -42,15 +44,15 @@ namespace Cauca.ApiClient.Services
         public async Task RefreshToken()
         {
             var token = await GetNewAccessToken();
-            Configuration.AccessToken = token;
+            accessInformation.AccessToken = token;
         }
 
         public async Task Login()
         {
             var login = await GetInitialAccessToken();
-            Configuration.AuthorizationType = login.AuthorizationType;
-            Configuration.AccessToken = login.AccessToken;
-            Configuration.RefreshToken = login.RefreshToken;
+            accessInformation.AuthorizationType = login.AuthorizationType;
+            accessInformation.AccessToken = login.AccessToken;
+            accessInformation.RefreshToken = login.RefreshToken;
         }
 
         private async Task<LoginResult> GetInitialAccessToken()
@@ -99,7 +101,7 @@ namespace Cauca.ApiClient.Services
                 if (exception.Call.RefreshTokenIsExpired() || exception.Call.RefreshTokenIsInvalid())
                 { 
                     await Login();
-                    return Configuration.AccessToken;
+                    return accessInformation.AccessToken;
                 }
             }
 
@@ -110,8 +112,8 @@ namespace Cauca.ApiClient.Services
         {
             return new TokenRefreshResult
             {
-                AccessToken = Configuration.AccessToken,
-                RefreshToken = Configuration.RefreshToken
+                AccessToken = accessInformation.AccessToken,
+                RefreshToken = accessInformation.RefreshToken
             };
         }
     }

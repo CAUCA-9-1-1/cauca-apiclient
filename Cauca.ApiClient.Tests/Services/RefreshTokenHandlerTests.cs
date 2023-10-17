@@ -14,22 +14,27 @@ namespace Cauca.ApiClient.Tests.Services
         private IConfiguration configuration;
         private IAsyncPolicy noRetryPolicy;
         private RefreshTokenHandler tokenHandler;
+        private AccessInformation accessInformation;
 
         [SetUp]
         public void SetupTest()
         {
             noRetryPolicy = new InstantRetryBuilder().BuildRetryPolicy(0);
+            accessInformation = new AccessInformation
+            {
+                AccessToken = "accesstoken",
+                RefreshToken = "refreshtoken",
+                AuthorizationType = "bearer"
+            };
 
             configuration = new MockConfiguration
             {
                 ApiBaseUrl = "http://test",
-                AccessToken = "accesstoken",
-                RefreshToken = "refreshtoken",
-                AuthorizationType = "bearer",
+
                 UseExternalSystemLogin = false
             };
 
-            tokenHandler = new RefreshTokenHandler(configuration, noRetryPolicy);
+            tokenHandler = new RefreshTokenHandler(configuration, accessInformation, noRetryPolicy);
         }
 
         [TestCase(true, "http://test/Authentication/refreshforexternalsystem")]
@@ -80,7 +85,7 @@ namespace Cauca.ApiClient.Tests.Services
 
             await tokenHandler.RefreshToken();
 
-            Assert.AreEqual(newToken, configuration.AccessToken);
+            Assert.AreEqual(newToken, accessInformation.AccessToken);
         }
 
         [Test]
@@ -91,7 +96,7 @@ namespace Cauca.ApiClient.Tests.Services
             
             await tokenHandler.RefreshToken();
 
-            Assert.IsNull(configuration.AccessToken);
+            Assert.IsNull(accessInformation.AccessToken);
         }
     }
 }

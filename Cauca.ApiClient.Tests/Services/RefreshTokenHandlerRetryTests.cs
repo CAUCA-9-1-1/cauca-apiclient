@@ -15,23 +15,26 @@ namespace Cauca.ApiClient.Tests.Services
     {
         private IConfiguration configuration;
         private IAsyncPolicy twoRetryPolicy;
+        private AccessInformation accessInformation;
         private RefreshTokenHandler tokenHandler;
 
         [SetUp]
         public void SetupTest()
         {
             twoRetryPolicy = new InstantRetryBuilder().BuildRetryPolicy(2);
-
+            accessInformation = new AccessInformation
+            {
+                AccessToken = "accesstoken",
+                RefreshToken = "refreshtoken",
+                AuthorizationType = "bearer"
+            };
             configuration = new MockConfiguration
             {
                 ApiBaseUrl = "http://test",
-                AccessToken = "accesstoken",
-                RefreshToken = "refreshtoken",
-                AuthorizationType = "bearer",
                 UseExternalSystemLogin = false
             };
 
-            tokenHandler = new RefreshTokenHandler(configuration, twoRetryPolicy);
+            tokenHandler = new RefreshTokenHandler(configuration, accessInformation, twoRetryPolicy);
         }
 
         [Test]

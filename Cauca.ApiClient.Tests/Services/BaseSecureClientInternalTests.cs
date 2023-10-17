@@ -9,11 +9,10 @@ namespace Cauca.ApiClient.Tests.Services
         public BaseSecureClientInternalTests() : base(new MockConfiguration
         {
             ApiBaseUrl = "http://test",
-            AccessToken = "Token",
-            RefreshToken = "RefreshToken",
-            AuthorizationType = "Mock"
         })
         {
+            AccessInformation.AccessToken = "Token";
+            AccessInformation.AuthorizationType = "Mock";
         }
 
         [TestCase]
