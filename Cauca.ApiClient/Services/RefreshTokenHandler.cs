@@ -67,7 +67,7 @@ namespace Cauca.ApiClient.Services
             catch (FlurlHttpException exception)
             {
                 if (exception.Call.IsUnauthorized())
-                    throw new InvalidCredentialException(Configuration.UserId);
+                    throw new InvalidCredentialException(Configuration.UserId, exception);
 
                 if (exception.Call.NoResponse())
                     throw new NoResponseApiException(exception);

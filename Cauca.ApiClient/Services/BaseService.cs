@@ -270,7 +270,7 @@ namespace Cauca.ApiClient.Services
 
         protected async Task<byte[]> ExecutePostAndReceiveBytesAsync(IFlurlRequest request, object entity)
         {
-            return await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity).ReceiveBytes());
+            return await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity).ReceiveBytes ());
         }
 
         protected async Task<Stream> ExecutePostAndReceiveStreamAsync(IFlurlRequest request, object entity)

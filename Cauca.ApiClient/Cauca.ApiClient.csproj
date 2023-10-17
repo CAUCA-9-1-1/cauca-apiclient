@@ -4,15 +4,15 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>Fred Catellier</Authors>
     <Company>CAUCA 9-1-1</Company>
-    <Description>Support a different base authentication base url.</Description>
+    <Description>Client for unsecure or secure APIs.</Description>
     <Copyright>2021</Copyright>
     <PackageProjectUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</RepositoryUrl>
-    <Version>1.5.7</Version>
-    <AssemblyVersion>1.5.7.0</AssemblyVersion>
-    <FileVersion>1.5.7.0</FileVersion>
+    <Version>1.5.8</Version>
+    <AssemblyVersion>1.5.8.0</AssemblyVersion>
+    <FileVersion>1.5.8.0</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageReleaseNotes>Add file upload handling + response from exception.</PackageReleaseNotes>
+    <PackageReleaseNotes>Add inner exception to InvalidCredentionException.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
