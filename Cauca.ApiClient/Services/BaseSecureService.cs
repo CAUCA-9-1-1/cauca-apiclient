@@ -9,12 +9,12 @@ namespace Cauca.ApiClient.Services
 {
     public abstract class BaseSecureService<TConfiguration> 
         : BaseService<TConfiguration> 
-        where TConfiguration : IConfiguration
+        where TConfiguration : BaseApiClientConfiguration
     {
         public readonly AccessInformation AccessInformation = new AccessInformation();
 
-        protected BaseSecureService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null) 
-            : base(configuration, policyBuilder)
+        protected BaseSecureService(TConfiguration baseApiClientConfiguration, IRetryPolicyBuilder policyBuilder = null) 
+            : base(baseApiClientConfiguration, policyBuilder)
         {
         }
 

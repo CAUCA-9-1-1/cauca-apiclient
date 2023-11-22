@@ -11,7 +11,7 @@ namespace Cauca.ApiClient.Tests.Services
     [TestFixture]
     public class RefreshTokenHandlerTests
     {
-        private IConfiguration configuration;
+        private BaseApiClientConfiguration _baseApiClientConfiguration;
         private IAsyncPolicy noRetryPolicy;
         private RefreshTokenHandler tokenHandler;
         private AccessInformation accessInformation;
@@ -27,14 +27,14 @@ namespace Cauca.ApiClient.Tests.Services
                 AuthorizationType = "bearer"
             };
 
-            configuration = new MockConfiguration
+            _baseApiClientConfiguration = new MockBaseApiClientConfiguration
             {
                 ApiBaseUrl = "http://test",
 
                 UseExternalSystemLogin = false
             };
 
-            tokenHandler = new RefreshTokenHandler(configuration, accessInformation, noRetryPolicy);
+            tokenHandler = new RefreshTokenHandler(_baseApiClientConfiguration, accessInformation, noRetryPolicy);
         }
 
         [TestCase(true, "http://test/Authentication/refreshforexternalsystem")]
@@ -43,7 +43,7 @@ namespace Cauca.ApiClient.Tests.Services
         {
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new TokenRefreshResult());
-            configuration.UseExternalSystemLogin = useExternalSystem;
+            _baseApiClientConfiguration.UseExternalSystemLogin = useExternalSystem;
             
             await tokenHandler.RefreshToken();
 
@@ -54,26 +54,26 @@ namespace Cauca.ApiClient.Tests.Services
         public async Task AuthenticationUrlIsSet_WhenLoggingIn_ShouldUseBaseUrl()
         {
             var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = null;
+            _baseApiClientConfiguration.ApiBaseUrlForAuthentication = null;
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(loginResult);
 
             await tokenHandler.Login();
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrl}/Authentication/logon");
+            httpTest.ShouldHaveCalled($"{_baseApiClientConfiguration.ApiBaseUrl}/Authentication/logon");
         }
 
         [Test]
         public async Task AuthenticationUrlIsSet_WhenLoggingIn_ShouldUseBaseAuthenticationUrl()
         {
             var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = "http://test/secureApi";
+            _baseApiClientConfiguration.ApiBaseUrlForAuthentication = "http://test/secureApi";
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(loginResult);
 
             await tokenHandler.Login();
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrlForAuthentication}/Authentication/logon");
+            httpTest.ShouldHaveCalled($"{_baseApiClientConfiguration.ApiBaseUrlForAuthentication}/Authentication/logon");
         }
 
         [Test]

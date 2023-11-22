@@ -13,7 +13,7 @@ namespace Cauca.ApiClient.Tests.Services
     [TestFixture]
     internal class RefreshTokenHandlerRetryTests
     {
-        private IConfiguration configuration;
+        private BaseApiClientConfiguration _baseApiClientConfiguration;
         private IAsyncPolicy twoRetryPolicy;
         private AccessInformation accessInformation;
         private RefreshTokenHandler tokenHandler;
@@ -28,55 +28,55 @@ namespace Cauca.ApiClient.Tests.Services
                 RefreshToken = "refreshtoken",
                 AuthorizationType = "bearer"
             };
-            configuration = new MockConfiguration
+            _baseApiClientConfiguration = new MockBaseApiClientConfiguration
             {
                 ApiBaseUrl = "http://test",
                 UseExternalSystemLogin = false
             };
 
-            tokenHandler = new RefreshTokenHandler(configuration, accessInformation, twoRetryPolicy);
+            tokenHandler = new RefreshTokenHandler(_baseApiClientConfiguration, accessInformation, twoRetryPolicy);
         }
 
         [Test]
         public async Task OnTransientFailure_WhenLoggingIn_ShouldRetry()
         {
             var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = null;
+            _baseApiClientConfiguration.ApiBaseUrlForAuthentication = null;
             using var httpTest = new HttpTest();
             httpTest.RespondWith(status: 502);
             httpTest.RespondWithJson(loginResult);
 
             await tokenHandler.Login();
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrl}/Authentication/logon").Times(2);
+            httpTest.ShouldHaveCalled($"{_baseApiClientConfiguration.ApiBaseUrl}/Authentication/logon").Times(2);
         }
 
         [Test]
         public async Task OnConnectionTimeOut_WhenLoggingIn_ShouldRetry()
         {
             var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = null;
+            _baseApiClientConfiguration.ApiBaseUrlForAuthentication = null;
             using var httpTest = new HttpTest();
             httpTest.SimulateTimeout();
             httpTest.RespondWithJson(loginResult);
 
             await tokenHandler.Login();
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrl}/Authentication/logon").Times(2);
+            httpTest.ShouldHaveCalled($"{_baseApiClientConfiguration.ApiBaseUrl}/Authentication/logon").Times(2);
         }
 
         [Test]
         public async Task OnTransientFailure_WhenRefreshingToken_ShouldRetry()
         {
             var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = null;
+            _baseApiClientConfiguration.ApiBaseUrlForAuthentication = null;
             using var httpTest = new HttpTest();
             httpTest.RespondWith(status: 502);
             httpTest.RespondWithJson(loginResult);
 
             await tokenHandler.RefreshToken();
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrl}/Authentication/refresh").Times(2);
+            httpTest.ShouldHaveCalled($"{_baseApiClientConfiguration.ApiBaseUrl}/Authentication/refresh").Times(2);
         }
     }
 }

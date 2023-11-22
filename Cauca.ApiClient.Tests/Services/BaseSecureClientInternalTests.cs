@@ -6,7 +6,7 @@ namespace Cauca.ApiClient.Tests.Services
     [TestFixture]
     public class BaseSecureClientInternalTests : MockSecureRepository
     {
-        public BaseSecureClientInternalTests() : base(new MockConfiguration
+        public BaseSecureClientInternalTests() : base(new MockBaseApiClientConfiguration
         {
             ApiBaseUrl = "http://test",
         })

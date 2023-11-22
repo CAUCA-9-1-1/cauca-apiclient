@@ -18,7 +18,7 @@ namespace Cauca.ApiClient.Tests.Services
         public void SetUpTest()
         {
             builder = new InstantRetryBuilder();
-            var configuration = new MockConfiguration
+            var configuration = new MockBaseApiClientConfiguration
             {
                 ApiBaseUrl = "http://test/",
             };

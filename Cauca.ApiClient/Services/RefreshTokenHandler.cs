@@ -13,18 +13,18 @@ namespace Cauca.ApiClient.Services
         private readonly AccessInformation accessInformation;
         private readonly IAsyncPolicy retryPolicy;
 
-        protected IConfiguration Configuration { get; set; }
+        protected BaseApiClientConfiguration BaseApiClientConfiguration { get; set; }
 
-        public RefreshTokenHandler(IConfiguration configuration, AccessInformation accessInformation, IAsyncPolicy policy)
+        public RefreshTokenHandler(BaseApiClientConfiguration baseApiClientConfiguration, AccessInformation accessInformation, IAsyncPolicy policy)
         {
-            Configuration = configuration;
+            BaseApiClientConfiguration = baseApiClientConfiguration;
             this.accessInformation = accessInformation;
             retryPolicy = policy;
         }
 
         private Url GenerateRefreshRequest()
         {
-            var baseUrl = Configuration.ApiBaseUrlForAuthentication ?? Configuration.ApiBaseUrl;
+            var baseUrl = BaseApiClientConfiguration.ApiBaseUrlForAuthentication ?? BaseApiClientConfiguration.ApiBaseUrl;
             return baseUrl
                 .AppendPathSegment("Authentication")
                 .AppendPathSegment(GetPathForRefresh());
@@ -32,14 +32,14 @@ namespace Cauca.ApiClient.Services
 
         private Url GenerateLoginRequest()
         {
-            var baseUrl = Configuration.ApiBaseUrlForAuthentication ?? Configuration.ApiBaseUrl;
+            var baseUrl = BaseApiClientConfiguration.ApiBaseUrlForAuthentication ?? BaseApiClientConfiguration.ApiBaseUrl;
             return baseUrl
                 .AppendPathSegment("Authentication")
                 .AppendPathSegment(GetPathForLogin());
         }
 
-        private string GetPathForLogin() => Configuration.UseExternalSystemLogin ? "logonforexternalsystem" : "logon";
-        private string GetPathForRefresh() => Configuration.UseExternalSystemLogin ? "refreshforexternalsystem" : "refresh";
+        private string GetPathForLogin() => BaseApiClientConfiguration.UseExternalSystemLogin ? "logonforexternalsystem" : "logon";
+        private string GetPathForRefresh() => BaseApiClientConfiguration.UseExternalSystemLogin ? "refreshforexternalsystem" : "refresh";
 
         public async Task RefreshToken()
         {
@@ -69,7 +69,7 @@ namespace Cauca.ApiClient.Services
             catch (FlurlHttpException exception)
             {
                 if (exception.Call.IsUnauthorized())
-                    throw new InvalidCredentialException(Configuration.UserId, exception);
+                    throw new InvalidCredentialException(BaseApiClientConfiguration.UserId, exception);
 
                 if (exception.Call.NoResponse())
                     throw new NoResponseApiException(exception);
@@ -80,9 +80,9 @@ namespace Cauca.ApiClient.Services
 
         private object GetLoginBody()
         {
-            if (Configuration.UseExternalSystemLogin)
-                return new {ApiKey = Configuration.UserId};
-            return new {Configuration.UserId, Configuration.Password};
+            if (BaseApiClientConfiguration.UseExternalSystemLogin)
+                return new {ApiKey = BaseApiClientConfiguration.UserId};
+            return new {BaseApiClientConfiguration.UserId, BaseApiClientConfiguration.Password};
         }
 
         private async Task<string> GetNewAccessToken()

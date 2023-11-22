@@ -12,16 +12,15 @@ using Polly;
 namespace Cauca.ApiClient.Services
 {
     public abstract class BaseService<TConfiguration> : IBaseService
-        where TConfiguration : IConfiguration
+        where TConfiguration : BaseApiClientConfiguration
     {
         protected IAsyncPolicy RetryPolicy;
         protected TConfiguration Configuration { get; set; }
-        protected virtual int MaxRetryAttemptOnTransientFailure { get; } = 3;
 
-        protected BaseService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null)
+        protected BaseService(TConfiguration baseApiClientConfiguration, IRetryPolicyBuilder policyBuilder = null)
         {
-            Configuration = configuration;
-            RetryPolicy = (policyBuilder ?? new RetryPolicyBuilder()).BuildRetryPolicy(MaxRetryAttemptOnTransientFailure);
+            Configuration = baseApiClientConfiguration;
+            RetryPolicy = (policyBuilder ?? new RetryPolicyBuilder()).BuildRetryPolicy(baseApiClientConfiguration.MaxRequestRetryAttempts);
         }
 
         public async Task<TResult> PostAsync<TResult>(string url, object entity)
