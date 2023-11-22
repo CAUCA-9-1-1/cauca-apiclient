@@ -10,12 +10,12 @@ namespace Cauca.ApiClient.Tests.Services
     [TestFixture]
     public class BaseSecureClientTests
     {
-        private MockConfiguration configuration;
+        private MockBaseApiClientConfiguration _baseApiClientConfiguration;
 
         [SetUp]
         public void SetupTest()
         {
-            configuration = new MockConfiguration
+            _baseApiClientConfiguration = new MockBaseApiClientConfiguration
             {
                 ApiBaseUrl = "http://test/",
             };
@@ -29,7 +29,7 @@ namespace Cauca.ApiClient.Tests.Services
                 httpTest.RespondWithJson(new MockResponse());
 
                 var country = new MockEntity();
-                var repo = new MockSecureRepository(configuration);
+                var repo = new MockSecureRepository(_baseApiClientConfiguration);
                 await repo.PostAsync<MockResponse>("mock", country);
 
                 httpTest.ShouldHaveCalled("http://test/mock")
@@ -49,7 +49,7 @@ namespace Cauca.ApiClient.Tests.Services
                     .RespondWithJson(new MockResponse());
 
                 var country = new MockEntity();
-                var repo = new MockSecureRepository(configuration);
+                var repo = new MockSecureRepository(_baseApiClientConfiguration);
                 await repo.PostAsync<MockResponse>("mock", country);
 
                 httpTest.ShouldHaveCalled("http://test/Authentication/logon")
@@ -68,7 +68,7 @@ namespace Cauca.ApiClient.Tests.Services
         [TestCase]
         public async Task WithApiBaseUrlForAuthentication_RequestLoginBeforeExecutingWhenNotLoggedIn_ShouldBeExecutedWithUrlForAuthentication()
         {
-            configuration.ApiBaseUrlForAuthentication = "http://test-for-authentication";
+            _baseApiClientConfiguration.ApiBaseUrlForAuthentication = "http://test-for-authentication";
 
             using (var httpTest = new HttpTest())
             {
@@ -77,7 +77,7 @@ namespace Cauca.ApiClient.Tests.Services
                     .RespondWithJson(new MockResponse());
 
                 var country = new MockEntity();
-                var repo = new MockSecureRepository(configuration);
+                var repo = new MockSecureRepository(_baseApiClientConfiguration);
                 await repo.PostAsync<MockResponse>("mock", country);
 
                 httpTest.ShouldHaveCalled("http://test-for-authentication/Authentication/logon")
@@ -103,7 +103,7 @@ namespace Cauca.ApiClient.Tests.Services
                     .RespondWithJson(new MockResponse());
 
                 var country = new MockEntity();
-                var repo = new MockSecureRepository(configuration);
+                var repo = new MockSecureRepository(_baseApiClientConfiguration);
                 await repo.PostAsync<MockResponse>("mock", country);
 
                 Assert.AreEqual("NewRefreshToken", repo.AccessInformation.RefreshToken);
@@ -219,7 +219,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new MockResponse(), 500);
             var entity = new MockEntity();
-            var repo = new MockSecureRepository(configuration);
+            var repo = new MockSecureRepository(_baseApiClientConfiguration);
             Assert.ThrowsAsync<InternalErrorApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
         }
 
@@ -229,13 +229,13 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.SimulateTimeout();
             var entity = new MockEntity();
-            var repo = new MockSecureRepository(configuration);
+            var repo = new MockSecureRepository(_baseApiClientConfiguration);
             Assert.ThrowsAsync<NoResponseApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
         }
 
         private MockSecureRepository CreateSecureRepository()
         {
-            var repo = new MockSecureRepository(configuration);
+            var repo = new MockSecureRepository(_baseApiClientConfiguration);
             repo.AccessInformation.AccessToken = "Token";
             repo.AccessInformation.RefreshToken = "RefreshToken";
             repo.AccessInformation.AuthorizationType = "Mock";

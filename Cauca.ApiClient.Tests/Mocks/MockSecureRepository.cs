@@ -2,11 +2,9 @@
 
 namespace Cauca.ApiClient.Tests.Mocks
 {
-    public class MockSecureRepository : BaseSecureService<MockConfiguration>
+    public class MockSecureRepository : BaseSecureService<MockBaseApiClientConfiguration>
     {
-        protected override int MaxRetryAttemptOnTransientFailure => 0;
-
-        public MockSecureRepository(MockConfiguration configuration) : base(configuration)
+        public MockSecureRepository(MockBaseApiClientConfiguration baseApiClientConfiguration) : base(baseApiClientConfiguration)
         {
         }
     }

@@ -3,9 +3,9 @@ using Cauca.ApiClient.Services;
 
 namespace Cauca.ApiClient.Tests.Mocks
 {
-    public class MockRepositoryWithRetries : BaseService<MockConfiguration>
+    public class MockRepositoryWithRetries : BaseService<MockBaseApiClientConfiguration>
     {
-        public MockRepositoryWithRetries(MockConfiguration configuration, IRetryPolicyBuilder policyBuilder = null) : base(configuration, policyBuilder)
+        public MockRepositoryWithRetries(MockBaseApiClientConfiguration baseApiClientConfiguration, IRetryPolicyBuilder policyBuilder = null) : base(baseApiClientConfiguration, policyBuilder)
         {
         }
     }

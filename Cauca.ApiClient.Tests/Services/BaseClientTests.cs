@@ -10,18 +10,18 @@ namespace Cauca.ApiClient.Tests.Services
 {
     public class BaseClientTests
     {
-        private MockConfiguration configuration;
-        private MockConfiguration configurationWithNoTrailingSlash;
+        private MockBaseApiClientConfiguration _baseApiClientConfiguration;
+        private MockBaseApiClientConfiguration _baseApiClientConfigurationWithNoTrailingSlash;
 
         [SetUp]
         public void SetupTest()
         {
-            configuration = new MockConfiguration
+            _baseApiClientConfiguration = new MockBaseApiClientConfiguration
             {
                 ApiBaseUrl = "http://test/",
             };
 
-            configurationWithNoTrailingSlash = new MockConfiguration
+            _baseApiClientConfigurationWithNoTrailingSlash = new MockBaseApiClientConfiguration
             {
                 ApiBaseUrl = "http://test",
             };
@@ -32,7 +32,7 @@ namespace Cauca.ApiClient.Tests.Services
         {
             using var httpTest = new HttpTest();
             var entity = new MockEntity();
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             await repo.PostAsync<MockResponse>("mock", entity);
 
             httpTest.ShouldHaveCalled("http://test/mock")
@@ -46,7 +46,7 @@ namespace Cauca.ApiClient.Tests.Services
         {
             using var httpTest = new HttpTest();
             var entity = new MockEntity();
-            var repo = new MockRepository(configurationWithNoTrailingSlash);
+            var repo = new MockRepository(_baseApiClientConfigurationWithNoTrailingSlash);
             await repo.PostAsync<MockResponse>("mock", entity);
 
             httpTest.ShouldHaveCalled("http://test/mock")
@@ -61,7 +61,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new MockResponse(), 404);
             var entity = new MockEntity();
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             Assert.ThrowsAsync<NotFoundApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
         }
 
@@ -71,7 +71,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new MockResponse(), 400);
             var entity = new MockEntity();
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             Assert.ThrowsAsync<BadParameterApiException>(async () =>
                 await repo.PostAsync<MockResponse>("mock", entity));
         }
@@ -82,7 +82,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new MockResponse(), 403);
             var entity = new MockEntity();
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             Assert.ThrowsAsync<ForbiddenApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
         }
 
@@ -92,7 +92,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.RespondWithJson(new MockResponse(), 500);
             var entity = new MockEntity();
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             Assert.ThrowsAsync<InternalErrorApiException>(
                 async () => await repo.PostAsync<MockResponse>("mock", entity));
         }
@@ -103,7 +103,7 @@ namespace Cauca.ApiClient.Tests.Services
             using var httpTest = new HttpTest();
             httpTest.SimulateTimeout();
             var entity = new MockEntity();
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             Assert.ThrowsAsync<NoResponseApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
         }
 
@@ -112,7 +112,7 @@ namespace Cauca.ApiClient.Tests.Services
         {
             using var httpTest = new HttpTest();
             httpTest.RespondWith(true.ToString());
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             var response = await repo.GetAsync<bool>("mock");
 
             httpTest.ShouldHaveCalled("http://test/mock")
@@ -127,7 +127,7 @@ namespace Cauca.ApiClient.Tests.Services
         {
             using var httpTest = new HttpTest();
             httpTest.RespondWith(false.ToString());
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             var response = await repo.GetAsync<bool>("mock");
 
             httpTest.ShouldHaveCalled("http://test/mock")
@@ -142,7 +142,7 @@ namespace Cauca.ApiClient.Tests.Services
         {
             using var httpTest = new HttpTest();
             httpTest.RespondWith("Allo");
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             var response = await repo.GetAsync<string>("mock");
 
             httpTest.ShouldHaveCalled("http://test/mock")
@@ -157,7 +157,7 @@ namespace Cauca.ApiClient.Tests.Services
         {
             using var httpTest = new HttpTest();
             httpTest.RespondWith("Allo");
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             var response = await repo.GetStringAsync("mock");
 
             httpTest.ShouldHaveCalled("http://test/mock")
@@ -172,7 +172,7 @@ namespace Cauca.ApiClient.Tests.Services
         {
             using var httpTest = new HttpTest();
             httpTest.RespondWith(33.ToString());
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             var response = await repo.GetAsync<int>("mock");
 
             httpTest.ShouldHaveCalled("http://test/mock")
@@ -188,7 +188,7 @@ namespace Cauca.ApiClient.Tests.Services
             var text = "Ceci est mon test";
             using var httpTest = new HttpTest();
             httpTest.RespondWith(text);
-            var repo = new MockRepository(configuration);
+            var repo = new MockRepository(_baseApiClientConfiguration);
             var response = await repo.GetBytesAsync("mock");
 
             httpTest.ShouldHaveCalled("http://test/mock")
