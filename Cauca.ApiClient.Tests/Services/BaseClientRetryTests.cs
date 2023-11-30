@@ -5,6 +5,7 @@ using NUnit.Framework;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using FluentAssertions;
 
 namespace Cauca.ApiClient.Tests.Services
 {
@@ -43,8 +44,8 @@ namespace Cauca.ApiClient.Tests.Services
             httpTest.ShouldHaveCalled("http://test/mock")
                 .WithVerb(HttpMethod.Get)
                 .Times(4);
-
-            Assert.AreEqual(response, "Allo");
+            
+            response.Should().Be("Allo");
         }
 
         [Test]
@@ -63,7 +64,7 @@ namespace Cauca.ApiClient.Tests.Services
                 .WithVerb(HttpMethod.Get)
                 .Times(4);
 
-            Assert.AreEqual(response, "Allo");
+            response.Should().Be("Allo");
         }
     }
 }

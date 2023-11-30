@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Exceptions;
 using Cauca.ApiClient.Tests.Mocks;
+using FluentAssertions;
 using Flurl.Http.Testing;
 using NUnit.Framework;
 
@@ -119,7 +120,7 @@ namespace Cauca.ApiClient.Tests.Services
                 .WithVerb(HttpMethod.Get)
                 .Times(1);
 
-            Assert.AreEqual(response, true);
+            response.Should().BeTrue();
         }
 
         [TestCase]
@@ -134,7 +135,7 @@ namespace Cauca.ApiClient.Tests.Services
                 .WithVerb(HttpMethod.Get)
                 .Times(1);
 
-            Assert.AreEqual(response, false);
+            response.Should().BeFalse();
         }
 
         [TestCase]
@@ -149,7 +150,7 @@ namespace Cauca.ApiClient.Tests.Services
                 .WithVerb(HttpMethod.Get)
                 .Times(1);
 
-            Assert.AreEqual(response, "Allo");
+            response.Should().Be("Allo");
         }
 
         [TestCase]
@@ -164,7 +165,7 @@ namespace Cauca.ApiClient.Tests.Services
                 .WithVerb(HttpMethod.Get)
                 .Times(1);
 
-            Assert.AreEqual(response, "Allo");
+            response.Should().Be("Allo");
         }
 
         [TestCase]
@@ -179,7 +180,7 @@ namespace Cauca.ApiClient.Tests.Services
                 .WithVerb(HttpMethod.Get)
                 .Times(1);
 
-            Assert.AreEqual(response, 33);
+            response.Should().Be(33);
         }
 
         [TestCase]
@@ -195,7 +196,7 @@ namespace Cauca.ApiClient.Tests.Services
                 .WithVerb(HttpMethod.Get)
                 .Times(1);
 
-            Assert.AreEqual(text, Encoding.UTF8.GetString(response));
+            Encoding.UTF8.GetString(response).Should().Be(text);
         }
     }
 }

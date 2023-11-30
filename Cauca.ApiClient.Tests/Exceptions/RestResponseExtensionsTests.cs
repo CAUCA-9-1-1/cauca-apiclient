@@ -1,4 +1,5 @@
 ﻿using Cauca.ApiClient.Extensions;
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace Cauca.ApiClient.Tests.Exceptions
@@ -10,21 +11,21 @@ namespace Cauca.ApiClient.Tests.Exceptions
         public void ExpiredRefreshTokenIsCorrectlyDetected()
         {
             var response = GetResponse(System.Net.HttpStatusCode.Unauthorized, RestResponseExtensions.RefreshTokenExpired);
-            Assert.IsTrue(response.RefreshTokenIsExpired());
+            response.RefreshTokenIsExpired().Should().BeTrue();
         }
 
         [TestCase]
         public void InvalidAccessTokenIsCorrectlyDetected()
         {
             var response = GetResponse(System.Net.HttpStatusCode.Unauthorized, RestResponseExtensions.RefreshTokenInvalid);
-            Assert.IsTrue(response.RefreshTokenIsInvalid());
+            response.RefreshTokenIsInvalid().Should().BeTrue();
         }
 
         [TestCase]
         public void ExpiredAccessTokenIsCorrectlyDetected()
         {
             var response = GetResponse(System.Net.HttpStatusCode.Unauthorized, RestResponseExtensions.AccessTokenExpired);
-            Assert.IsTrue(response.AccessTokenIsExpired());
+            response.AccessTokenIsExpired().Should().BeTrue();
         }
     }
 }

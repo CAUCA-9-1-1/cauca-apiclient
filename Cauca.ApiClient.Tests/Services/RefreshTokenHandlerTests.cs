@@ -2,6 +2,7 @@
 using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Services;
 using Cauca.ApiClient.Tests.Mocks;
+using FluentAssertions;
 using Flurl.Http.Testing;
 using NUnit.Framework;
 using Polly;
@@ -85,7 +86,7 @@ namespace Cauca.ApiClient.Tests.Services
 
             await tokenHandler.RefreshToken();
 
-            Assert.AreEqual(newToken, accessInformation.AccessToken);
+            newToken.Should().Be(accessInformation.AccessToken);
         }
 
         [Test]
@@ -96,7 +97,7 @@ namespace Cauca.ApiClient.Tests.Services
             
             await tokenHandler.RefreshToken();
 
-            Assert.IsNull(accessInformation.AccessToken);
+            accessInformation.AccessToken.Should().BeNull();
         }
     }
 }

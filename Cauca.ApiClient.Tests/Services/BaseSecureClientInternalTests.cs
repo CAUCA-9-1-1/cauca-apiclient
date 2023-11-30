@@ -1,4 +1,5 @@
 ﻿using Cauca.ApiClient.Tests.Mocks;
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace Cauca.ApiClient.Tests.Services
@@ -18,7 +19,9 @@ namespace Cauca.ApiClient.Tests.Services
         [TestCase]
         public void AuthorizationHeaderIsCorrectlyGenerated()
         {
-            Assert.AreEqual("Mock Token", GetAuthorizationHeaderValue());
+            var result = GetAuthorizationHeaderValue();
+
+            result.Should().Be("Mock Token");
         }
     }
 }
