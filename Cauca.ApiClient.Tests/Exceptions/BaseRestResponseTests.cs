@@ -10,7 +10,9 @@ namespace Cauca.ApiClient.Tests.Exceptions
             var response = new HttpResponseMessage();
             response.Headers.Add(headerName, "True");
             response.StatusCode = code;
-            return new FlurlCall { Response = new FlurlResponse(response) };
+            var call = new FlurlCall { HttpResponseMessage = response };
+            call.Response = new FlurlResponse(call);
+            return call;
         }
     }
 }

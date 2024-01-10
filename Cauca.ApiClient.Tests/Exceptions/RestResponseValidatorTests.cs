@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace Cauca.ApiClient.Tests.Exceptions
 {
     [TestFixture]
-    public class RestResponseValidatorTests : BaseRestResponseTests
+    public class RestResponseValidatorTests
     {
         [Test]
         public void CorrectlyThrowsNotFoundException()
