@@ -24,86 +24,86 @@ namespace Cauca.ApiClient.Services
             RetryPolicy = (policyBuilder ?? new RetryPolicyBuilder()).BuildRetryPolicy(MaxRetryAttemptOnTransientFailure);
         }
 
-        public async Task<TResult> PostAsync<TResult>(string url, object entity)
+        public async Task<TResult> PostAsync<TResult>(string url, object entity, object? headers = null)
         {
-            return await ExecuteAsync(() => ExecutePostAsync<TResult>(GenerateRequest(url), entity));
+            return await ExecuteAsync(() => ExecutePostAsync<TResult>(GenerateRequest(url, headers), entity));
         }
 
-        public async Task PostAsync(string url, object entity)
+        public async Task PostAsync(string url, object entity, object? headers = null)
         {
-            await ExecuteAsync(() => ExecutePostAsync(GenerateRequest(url), entity));
+            await ExecuteAsync(() => ExecutePostAsync(GenerateRequest(url, headers), entity));
         }
 
-        public async Task<TResult> PutAsync<TResult>(string url, object entity)
+        public async Task<TResult> PutAsync<TResult>(string url, object entity, object? headers = null)
         {
-            return await ExecuteAsync(() => ExecutePutAsync<TResult>(GenerateRequest(url), entity));
+            return await ExecuteAsync(() => ExecutePutAsync<TResult>(GenerateRequest(url, headers), entity));
         }
 
-        public async Task<TResult> DeleteAsync<TResult>(string url)
+        public async Task<TResult> DeleteAsync<TResult>(string url, object? headers = null)
         {
-            return await ExecuteAsync(() => ExecuteDeleteAsync<TResult>(GenerateRequest(url)));
+            return await ExecuteAsync(() => ExecuteDeleteAsync<TResult>(GenerateRequest(url, headers)));
         }
 
-        public async Task DeleteAsync(string url)
+        public async Task DeleteAsync(string url, object? headers = null)
         {
-            await ExecuteAsync(() => ExecuteDeleteAsync(GenerateRequest(url)));
+            await ExecuteAsync(() => ExecuteDeleteAsync(GenerateRequest(url, headers)));
         }
 
-        public async Task<TResult> GetAsync<TResult>(string url)
+        public async Task<TResult> GetAsync<TResult>(string url, object? headers = null)
         {
-            return await ExecuteAsync(() => ExecuteGetAsync<TResult>(GenerateRequest(url)));
+            return await ExecuteAsync(() => ExecuteGetAsync<TResult>(GenerateRequest(url, headers)));
         }
 
-        public async Task GetAsync(string url)
+        public async Task GetAsync(string url, object? headers = null)
         {
-            await ExecuteAsync(() => ExecuteGetAsync(GenerateRequest(url)));
+            await ExecuteAsync(() => ExecuteGetAsync(GenerateRequest(url, headers)));
         }
 
-        public async Task<byte[]> GetBytesAsync(string url)
+        public async Task<byte[]> GetBytesAsync(string url, object? headers = null)
         {
-            return await ExecuteAsync(() => ExecuteGetBytesAsync(GenerateRequest(url)));
+            return await ExecuteAsync(() => ExecuteGetBytesAsync(GenerateRequest(url, headers)));
         }
 
-        public async Task<Stream> GetStreamAsync(string url)
+        public async Task<Stream> GetStreamAsync(string url, object? headers = null)
         {
-            return await ExecuteAsync(() => ExecuteGetStreamAsync(GenerateRequest(url)));
+            return await ExecuteAsync(() => ExecuteGetStreamAsync(GenerateRequest(url, headers)));
         }
 
-        public async Task<byte[]> PostAndReceiveBytesAsync(string url, object entity)
+        public async Task<byte[]> PostAndReceiveBytesAsync(string url, object entity, object? headers = null)
         {
-            return await ExecuteAsync(() => ExecutePostAndReceiveBytesAsync(GenerateRequest(url), entity));
+            return await ExecuteAsync(() => ExecutePostAndReceiveBytesAsync(GenerateRequest(url, headers), entity));
         }
 
-        public async Task<Stream> PostAndReceiveStreamAsync(string url, object entity)
+        public async Task<Stream> PostAndReceiveStreamAsync(string url, object entity, object? headers = null)
         {
-            return await ExecuteAsync(() => ExecutePostAndReceiveStreamAsync(GenerateRequest(url), entity));
+            return await ExecuteAsync(() => ExecutePostAndReceiveStreamAsync(GenerateRequest(url, headers), entity));
         }
 
-        public async Task<string> GetStringAsync(string url)
+        public async Task<string> GetStringAsync(string url, object? headers = null)
         {
-            return await ExecuteAsync(() => ExecuteGetStringAsync(GenerateRequest(url)));
+            return await ExecuteAsync(() => ExecuteGetStringAsync(GenerateRequest(url, headers)));
         }
 
-        protected async Task<T> PostFileAsync<T>(string url, string filename, Stream stream, string contentType)
+        protected async Task<T> PostFileAsync<T>(string url, string filename, Stream stream, string contentType, object? headers = null)
         {
             stream.Position = 0;            
-            return await ExecuteAsync<T>(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType)));
+            return await ExecuteAsync<T>(() => ExecutePostStreamAsync<T>(GenerateRequest(url, headers), mp => mp.AddFile(filename, stream, filename, contentType)));
         }
 
-        protected async Task<T> PostFileAsync<T>(string url, string fileFullPath, string fileName)
+        protected async Task<T> PostFileAsync<T>(string url, string fileFullPath, string fileName, object? headers = null)
         {
-            return await ExecuteAsync<T>(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath)));
+            return await ExecuteAsync<T>(() => ExecutePostStreamAsync<T>(GenerateRequest(url, headers), mp => mp.AddFile(fileName, fileFullPath)));
         }
 
-        protected async Task PostFileAsync(string url, string filename, Stream stream, string contentType)
+        protected async Task PostFileAsync(string url, string filename, Stream stream, string contentType, object? headers = null)
         {
             stream.Position = 0;
-            await ExecuteAsync(() => ExecutePostStreamAsync(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType)));
+            await ExecuteAsync(() => ExecutePostStreamAsync(GenerateRequest(url, headers), mp => mp.AddFile(filename, stream, filename, contentType)));
         }
 
-        protected async Task PostFileAsync(string url, string fileFullPath, string fileName)
+        protected async Task PostFileAsync(string url, string fileFullPath, string fileName, object? headers = null)
         {
-            await ExecuteAsync(() => ExecutePostStreamAsync(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath)));
+            await ExecuteAsync(() => ExecutePostStreamAsync(GenerateRequest(url, headers), mp => mp.AddFile(fileName, fileFullPath)));
         }
 
         protected virtual async Task<TResult> ExecuteAsync<TResult>(Func<Task<TResult>> request)
@@ -134,11 +134,18 @@ namespace Cauca.ApiClient.Services
             }
         }
 
-        protected virtual IFlurlRequest GenerateRequest(string url)
+        protected virtual IFlurlRequest GenerateRequest(string url, object? headers)
         {
-            return Configuration.ApiBaseUrl
+            var request = Configuration.ApiBaseUrl
                 .AppendPathSegment(url)
+                .WithHeaders(new { h1 = "foo", h2 = "bar" })
                 .WithTimeout(TimeSpan.FromSeconds(Configuration.RequestTimeoutInSeconds));
+
+            if (headers != null)
+            {
+                return request.WithHeaders(headers);
+            }
+            return request;
         }
 
         protected async Task ExecutePostAsync(IFlurlRequest request, object entity)

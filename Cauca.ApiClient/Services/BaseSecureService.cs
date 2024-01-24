@@ -18,9 +18,9 @@ namespace Cauca.ApiClient.Services
         {
         }
 
-        protected override IFlurlRequest GenerateRequest(string url)
+        protected override IFlurlRequest GenerateRequest(string url, object? headers)
         {
-            return base.GenerateRequest(url)
+            return base.GenerateRequest(url, headers)
                 .WithHeader("Authorization", GetAuthorizationHeaderValue());
         }
 

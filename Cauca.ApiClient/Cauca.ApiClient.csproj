@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>enable</Nullable>
     <Authors>Fred Catellier</Authors>
     <Company>CAUCA 9-1-1</Company>
     <Description>Client for unsecure or secure APIs.</Description>
