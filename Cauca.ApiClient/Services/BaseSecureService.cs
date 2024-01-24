@@ -13,7 +13,7 @@ namespace Cauca.ApiClient.Services
     {
         public readonly AccessInformation AccessInformation = new AccessInformation();
 
-        protected BaseSecureService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null) 
+        protected BaseSecureService(TConfiguration configuration, IRetryPolicyBuilder? policyBuilder = null) 
             : base(configuration, policyBuilder)
         {
         }

@@ -18,10 +18,15 @@ namespace Cauca.ApiClient.Services
         protected TConfiguration Configuration { get; set; }
         protected virtual int MaxRetryAttemptOnTransientFailure { get; } = 3;
 
-        protected BaseService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null)
+        protected BaseService(TConfiguration configuration, IRetryPolicyBuilder? policyBuilder = null)
         {
             Configuration = configuration;
-            RetryPolicy = (policyBuilder ?? new RetryPolicyBuilder()).BuildRetryPolicy(MaxRetryAttemptOnTransientFailure);
+            RetryPolicy = BuildRetryPolicy(policyBuilder);
+        }
+
+        private IAsyncPolicy BuildRetryPolicy(IRetryPolicyBuilder? policyBuilder)
+        {
+            return (policyBuilder ?? new RetryPolicyBuilder()).BuildRetryPolicy(MaxRetryAttemptOnTransientFailure);
         }
 
         public async Task<TResult> PostAsync<TResult>(string url, object entity, object? headers = null)
