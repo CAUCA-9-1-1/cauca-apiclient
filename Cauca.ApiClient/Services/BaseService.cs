@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Services.Interfaces;
@@ -15,13 +16,17 @@ namespace Cauca.ApiClient.Services
         where TConfiguration : IConfiguration
     {
         protected IAsyncPolicy RetryPolicy;
+        protected Func<HttpClient> Client;
+        protected string ApiPrefix;
         protected TConfiguration Configuration { get; set; }
-        protected virtual int MaxRetryAttemptOnTransientFailure { get; } = 3;
+        protected virtual int MaxRetryAttemptOnTransientFailure => 3;
 
-        protected BaseService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null)
+        protected BaseService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null, Func<HttpClient> client = null, string apiPrefix = null)
         {
             Configuration = configuration;
+            Client = client;
             RetryPolicy = (policyBuilder ?? new RetryPolicyBuilder()).BuildRetryPolicy(MaxRetryAttemptOnTransientFailure);
+            ApiPrefix = apiPrefix;
         }
 
         public async Task<TResult> PostAsync<TResult>(string url, object entity)
@@ -87,12 +92,12 @@ namespace Cauca.ApiClient.Services
         protected async Task<T> PostFileAsync<T>(string url, string filename, Stream stream, string contentType)
         {
             stream.Position = 0;            
-            return await ExecuteAsync<T>(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType)));
+            return await ExecuteAsync(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType)));
         }
 
         protected async Task<T> PostFileAsync<T>(string url, string fileFullPath, string fileName)
         {
-            return await ExecuteAsync<T>(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath)));
+            return await ExecuteAsync(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath)));
         }
 
         protected async Task PostFileAsync(string url, string filename, Stream stream, string contentType)
@@ -136,7 +141,13 @@ namespace Cauca.ApiClient.Services
 
         protected virtual IFlurlRequest GenerateRequest(string url)
         {
-            return Configuration.ApiBaseUrl
+            if (Client != null)
+            {
+                return new FlurlClient(Client(), Configuration.GetBaseUrl())
+                    .AppendRequest(ApiPrefix, url)
+                    .WithTimeout(TimeSpan.FromSeconds(Configuration.RequestTimeoutInSeconds));
+            }
+            return Configuration.GetBaseUrl()
                 .AppendPathSegment(url)
                 .WithTimeout(TimeSpan.FromSeconds(Configuration.RequestTimeoutInSeconds));
         }

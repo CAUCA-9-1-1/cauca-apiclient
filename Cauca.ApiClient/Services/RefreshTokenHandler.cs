@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Exceptions;
 using Cauca.ApiClient.Extensions;
@@ -8,34 +10,43 @@ using Polly;
 
 namespace Cauca.ApiClient.Services
 {
-    public class RefreshTokenHandler
+    public class RefreshTokenHandler(
+        IConfiguration configuration,
+        AccessInformation accessInformation,
+        IAsyncPolicy policy,
+        Func<HttpClient> client = null,
+        string apiPrefix = null)
     {
-        private readonly AccessInformation accessInformation;
-        private readonly IAsyncPolicy retryPolicy;
+        protected IConfiguration Configuration { get; set; } = configuration;
 
-        protected IConfiguration Configuration { get; set; }
-
-        public RefreshTokenHandler(IConfiguration configuration, AccessInformation accessInformation, IAsyncPolicy policy)
+        private IFlurlRequest GenerateRefreshRequest()
         {
-            Configuration = configuration;
-            this.accessInformation = accessInformation;
-            retryPolicy = policy;
+            if (client != null)
+            {
+                return new FlurlClient(client(), Configuration.GetAuthenticationBaseUrl())
+                    .AppendRequest(apiPrefix, "Authentication")
+                    .AppendPathSegment(GetPathForRefresh())
+                    .WithTimeout(TimeSpan.FromSeconds(Configuration.RequestTimeoutInSeconds));
+            }
+            return Configuration.GetAuthenticationBaseUrl()
+                .AppendPathSegment("Authentication")
+                .AppendPathSegment(GetPathForRefresh())
+                .WithTimeout(TimeSpan.FromSeconds(Configuration.RequestTimeoutInSeconds));
         }
 
-        private Url GenerateRefreshRequest()
+        private IFlurlRequest GenerateLoginRequest()
         {
-            var baseUrl = Configuration.ApiBaseUrlForAuthentication ?? Configuration.ApiBaseUrl;
-            return baseUrl
+            if (client != null)
+            {
+                return new FlurlClient(client(), Configuration.GetAuthenticationBaseUrl())
+                    .AppendRequest(apiPrefix, "Authentication")
+                    .AppendPathSegment(GetPathForLogin())
+                    .WithTimeout(TimeSpan.FromSeconds(Configuration.RequestTimeoutInSeconds));
+            }
+            return Configuration.GetAuthenticationBaseUrl()
                 .AppendPathSegment("Authentication")
-                .AppendPathSegment(GetPathForRefresh());
-        }
-
-        private Url GenerateLoginRequest()
-        {
-            var baseUrl = Configuration.ApiBaseUrlForAuthentication ?? Configuration.ApiBaseUrl;
-            return baseUrl
-                .AppendPathSegment("Authentication")
-                .AppendPathSegment(GetPathForLogin());
+                .AppendPathSegment(GetPathForLogin())
+                .WithTimeout(TimeSpan.FromSeconds(Configuration.RequestTimeoutInSeconds));
         }
 
         private string GetPathForLogin() => Configuration.UseExternalSystemLogin ? "logonforexternalsystem" : "logon";
@@ -61,7 +72,7 @@ namespace Cauca.ApiClient.Services
 
             try
             {
-                var response = await retryPolicy.ExecuteAsync(() => request
+                var response = await policy.ExecuteAsync(() => request
                     .PostJsonAsync(GetLoginBody())
                     .ReceiveJson<LoginResult>());
                 return response;
@@ -91,7 +102,7 @@ namespace Cauca.ApiClient.Services
 
             try
             {
-                var response = await retryPolicy.ExecuteAsync(() => request
+                var response = await policy.ExecuteAsync(() => request
                     .PostJsonAsync(GetRefreshTokenBody())
                     .ReceiveJson<TokenRefreshResult>());
                 return response.AccessToken;

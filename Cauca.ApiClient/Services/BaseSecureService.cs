@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Extensions;
@@ -11,10 +12,15 @@ namespace Cauca.ApiClient.Services
         : BaseService<TConfiguration> 
         where TConfiguration : IConfiguration
     {
-        public readonly AccessInformation AccessInformation = new AccessInformation();
+        public readonly AccessInformation AccessInformation = new();
 
-        protected BaseSecureService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null) 
+        protected BaseSecureService(TConfiguration configuration, IRetryPolicyBuilder policyBuilder = null)
             : base(configuration, policyBuilder)
+        {
+        }
+
+        protected BaseSecureService(TConfiguration configuration, Func<HttpClient> client, string apiPrefix) 
+            : base(configuration, null, client, apiPrefix)
         {
         }
 
@@ -74,21 +80,24 @@ namespace Cauca.ApiClient.Services
         protected async Task LoginWhenLoggedOut()
         {
             if (string.IsNullOrWhiteSpace(AccessInformation.AccessToken))
-                await new RefreshTokenHandler(Configuration, AccessInformation, RetryPolicy)
+                await GetRefreshTokenHandler()
                     .Login();
         }
 
         private async Task<TResult> RefreshTokenThenRetry<TResult>(Func<Task<TResult>> action)
         {
-            await new RefreshTokenHandler(Configuration, AccessInformation, RetryPolicy)
-                .RefreshToken();
+            await GetRefreshTokenHandler().RefreshToken();
             return await action();
         }
         private async Task RefreshTokenThenRetry(Func<Task> action)
         {
-            await new RefreshTokenHandler(Configuration, AccessInformation, RetryPolicy)
-                .RefreshToken();
+            await GetRefreshTokenHandler().RefreshToken();
             await action();
+        }
+
+        private RefreshTokenHandler GetRefreshTokenHandler()
+        {
+            return new RefreshTokenHandler(Configuration, AccessInformation, RetryPolicy, Client, ApiPrefix);
         }
     }
 
