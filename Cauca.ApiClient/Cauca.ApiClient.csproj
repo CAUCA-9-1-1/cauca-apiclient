@@ -8,11 +8,11 @@
     <Copyright>2025</Copyright>
     <PackageProjectUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</RepositoryUrl>
-    <Version>3.1.6</Version>
-    <AssemblyVersion>3.1.6.0</AssemblyVersion>
-    <FileVersion>3.1.6.0</FileVersion>
+    <Version>3.2.0</Version>
+    <AssemblyVersion>3.2.0.0</AssemblyVersion>
+    <FileVersion>3.2.0.0</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageReleaseNotes>Breaking changes - Add new ApiPrefix config</PackageReleaseNotes>
+    <PackageReleaseNotes>Add support for a body in DeleteAsync.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

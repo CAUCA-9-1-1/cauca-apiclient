@@ -54,6 +54,11 @@ namespace Cauca.ApiClient.Services
             await ExecuteAsync(() => ExecuteDeleteAsync(GenerateRequest(url)));
         }
 
+        public async Task DeleteAsync(string url, object entity)
+        {
+            await ExecuteAsync(() => ExecuteDeleteAsync(GenerateRequest(url), entity));
+        }
+
         public async Task<TResult> GetAsync<TResult>(string url)
         {
             return await ExecuteAsync(() => ExecuteGetAsync<TResult>(GenerateRequest(url)));
@@ -264,6 +269,12 @@ namespace Cauca.ApiClient.Services
         {
             await RetryPolicy.ExecuteAsync(() => request
                 .DeleteAsync());
+        }
+
+        protected async Task ExecuteDeleteAsync(IFlurlRequest request, object entity)
+        {
+            await RetryPolicy.ExecuteAsync(() => request
+                .SendJsonAsync(HttpMethod.Delete, entity));
         }
 
         protected async Task<TResult> ExecutePostStreamAsync<TResult>(IFlurlRequest request, Action<CapturedMultipartContent> action)
