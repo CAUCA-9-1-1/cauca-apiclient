@@ -2,30 +2,34 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Cauca.ApiClient.Exceptions
+namespace Cauca.ApiClient.Exceptions;
+
+public abstract class ApiClientException : Exception
 {
-	public abstract class ApiClientException : Exception
-	{
-		protected ApiClientException(string message, Exception innerException) : base(message, innerException)
-		{
-		}
+    public string Body { get; set; }
+    public string ResponseBody { get; set; }
 
-	    protected ApiClientException(string message) : base(message)
-	    {
-	    }
+    protected ApiClientException(string message, Exception innerException, string body = null, string responseBody = null) : base(message, innerException)
+    {
+        Body = body;
+        ResponseBody = responseBody;
+    }
 
-		public async Task<T> GetResponseAsync<T>()
-        {
-			if (InnerException is FlurlHttpException flurlException)
-				return await flurlException.GetResponseJsonAsync<T>();			
-			return default(T);
-        }
+    protected ApiClientException(string message) : base(message)
+    {
+    }
 
-		public async Task<string> GetResponseStringAsync()
-		{
-			if (InnerException is FlurlHttpException flurlException)
-				return await flurlException.GetResponseStringAsync();
-			return null;
-		}
-	}
+    public async Task<T> GetResponseAsync<T>()
+    {
+        if (InnerException is FlurlHttpException flurlException)
+            return await flurlException.GetResponseJsonAsync<T>();			
+        return default(T);
+    }
+
+    public async Task<string> GetResponseStringAsync()
+    {
+        if (InnerException is FlurlHttpException flurlException)
+            return await flurlException.GetResponseStringAsync();
+        return null;
+    }
 }

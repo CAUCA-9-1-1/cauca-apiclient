@@ -124,10 +124,30 @@ namespace Cauca.ApiClient.Services
             }
             catch (FlurlHttpException exception)
             {
+                var body = await GetBodyAsync(exception);
                 new RestResponseValidator()
-                    .ThrowExceptionForStatusCode(exception.Call.Request.Url, exception.Call.Succeeded, (HttpStatusCode?)exception.Call.Response?.StatusCode, exception);
+                    .ThrowExceptionForStatusCode(exception.Call!.Request.Url, exception.Call.Succeeded, (HttpStatusCode?)exception.Call.Response?.StatusCode, exception, body);
                 throw;
             }
+        }
+
+        protected static async Task<string> GetBodyAsync(FlurlHttpException exception)
+        {
+            try
+            {
+
+                if (exception.Call?.Response is FlurlResponse { ResponseMessage.Content: CapturedStringContent content })
+                    return content.Content;
+                if (exception.Call?.Response is FlurlResponse { ResponseMessage.Content: StreamContent streamContent })
+                    return await streamContent.ReadAsStringAsync();
+                if (exception.Call?.Response is FlurlResponse)
+                    return await exception.Call.Response.GetStringAsync();
+            }
+            catch
+            {
+                return null;
+            }
+            return null;
         }
 
         protected virtual async Task ExecuteAsync(Func<Task> request)
@@ -139,7 +159,7 @@ namespace Cauca.ApiClient.Services
             catch (FlurlHttpException exception)
             {
                 new RestResponseValidator()
-                    .ThrowExceptionForStatusCode(exception.Call.Request.Url, exception.Call.Succeeded, (HttpStatusCode?)exception.Call.Response?.StatusCode, exception);
+                    .ThrowExceptionForStatusCode(exception.Call.Request.Url, exception.Call.Succeeded, (HttpStatusCode?)exception.Call.Response?.StatusCode, exception, await GetBodyAsync(exception));
                 throw;
             }
         }

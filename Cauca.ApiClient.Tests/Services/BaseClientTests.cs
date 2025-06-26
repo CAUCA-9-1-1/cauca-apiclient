@@ -77,7 +77,28 @@ public class BaseClientTests
             await repo.PostAsync<MockResponse>("mock", entity));
     }
 
-    [TestCase]
+    [Test]
+    public async Task InvalidRequest_WhenGeneratingException_ShouldContainsBody()
+    {
+        var expectedError = new { ErrorMessage = "Oh noes!" };
+        using var httpTest = new HttpTest();
+        httpTest.RespondWithJson(expectedError, 400);
+        var entity = new MockEntity();
+        var repo = new MockRepository(configuration);
+
+        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+
+        await action.Should().ThrowAsync<BadParameterApiException>()
+            .Where(exception => HasException(exception, expectedError));
+    }
+
+    private static bool HasException(BadParameterApiException exception, object expectedResponse)
+    {
+        var expectedSerializedResponse = System.Text.Json.JsonSerializer.Serialize(expectedResponse);
+        return exception.Body == expectedSerializedResponse;
+    }
+
+    [Test]
     public void RequestIsThrowingErrorWhenGettingForbidden()
     {
         using var httpTest = new HttpTest();
