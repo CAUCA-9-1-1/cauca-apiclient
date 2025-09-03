@@ -96,7 +96,7 @@ namespace Cauca.ApiClient.Services
 
         protected async Task<T> PostFileAsync<T>(string url, string filename, Stream stream, string contentType)
         {
-            stream.Position = 0;            
+            stream.Position = 0;
             return await ExecuteAsync(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType)));
         }
 
@@ -135,11 +135,10 @@ namespace Cauca.ApiClient.Services
         {
             try
             {
-
                 if (exception.Call?.Response is FlurlResponse { ResponseMessage.Content: CapturedStringContent content })
                     return content.Content;
-                if (exception.Call?.Response is FlurlResponse { ResponseMessage.Content: StreamContent streamContent })
-                    return await streamContent.ReadAsStringAsync();
+                if (exception.Call?.Response is FlurlResponse response && response.ResponseMessage.Content is HttpContent httpContent)
+                    return await httpContent.ReadAsStringAsync();
                 if (exception.Call?.Response is FlurlResponse)
                     return await exception.Call.Response.GetStringAsync();
             }

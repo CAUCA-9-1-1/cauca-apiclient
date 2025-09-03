@@ -1,4 +1,7 @@
-﻿using System.Net.Http;
+﻿using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Exceptions;
@@ -90,6 +93,80 @@ public class BaseClientTests
 
         await action.Should().ThrowAsync<BadParameterApiException>()
             .Where(exception => HasException(exception, expectedError));
+    }
+
+    [Test]
+    public async Task InvalidRequest_WithStreamContent_ShouldContainBody()
+    {
+    var expectedError = new { Error = "Stream content error message" };
+    using var httpTest = new HttpTest();
+    httpTest.RespondWithJson(expectedError, 400);
+        var entity = new MockEntity();
+        var repo = new MockRepository(configuration);
+
+        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+
+        await action.Should().ThrowAsync<BadParameterApiException>()
+            .Where(exception => exception.Body != null && exception.Body.Contains("Stream content error message"));
+    }
+
+    [Test]
+    public async Task InvalidRequest_WithByteArrayContent_ShouldContainBody()
+    {
+    var expectedError = new { Error = "Byte array content error" };
+    using var httpTest = new HttpTest();
+    httpTest.RespondWithJson(expectedError, 400);
+        var entity = new MockEntity();
+        var repo = new MockRepository(configuration);
+
+        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+
+        await action.Should().ThrowAsync<BadParameterApiException>()
+            .Where(exception => exception.Body != null && exception.Body.Contains("Byte array content error"));
+    }
+
+    [Test]
+    public async Task InvalidRequest_WithFormUrlEncodedContent_ShouldContainBody()
+    {
+        var expectedError = "key1=value1&key2=value2";
+        using var httpTest = new HttpTest();
+        httpTest.RespondWith(expectedError, 400, headers: new { ContentType = "application/x-www-form-urlencoded" });
+        var entity = new MockEntity();
+        var repo = new MockRepository(configuration);
+
+        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+
+        await action.Should().ThrowAsync<BadParameterApiException>()
+            .Where(exception => exception.Body == expectedError);
+    }
+
+    [Test]
+    public async Task InvalidRequest_WithMultipartContent_ShouldContainBody()
+    {
+    var expected = new { field1 = "value1", field2 = "value2" };
+    using var httpTest = new HttpTest();
+    httpTest.RespondWithJson(expected, 400);
+        var entity = new MockEntity();
+        var repo = new MockRepository(configuration);
+
+        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+
+        await action.Should().ThrowAsync<BadParameterApiException>()
+            .Where(exception => exception.Body != null && exception.Body.Contains("value1") && exception.Body.Contains("value2"));
+    }
+
+    [Test]
+    public async Task InvalidRequest_WithEmptyContent_ShouldHaveNullBody()
+    {
+        using var httpTest = new HttpTest();
+        httpTest.RespondWith("", 400);
+        var entity = new MockEntity();
+        var repo = new MockRepository(configuration);
+
+        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+
+        await action.Should().ThrowAsync<BadParameterApiException>()
+            .Where(exception => exception.Body == "");
     }
 
     private static bool HasException(BadParameterApiException exception, object expectedResponse)
