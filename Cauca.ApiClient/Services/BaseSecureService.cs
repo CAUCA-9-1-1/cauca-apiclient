@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Extensions;
@@ -35,64 +36,65 @@ namespace Cauca.ApiClient.Services
             return $"{AccessInformation.AuthorizationType} {AccessInformation.AccessToken}";
         }
 
-        protected override async Task<TResult> ExecuteAsync<TResult>(Func<Task<TResult>> request)
+        protected override async Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> request, CancellationToken cancellationToken)
         {
-            await LoginWhenLoggedOut();
+            await LoginWhenLoggedOut(cancellationToken);
             try
             {
-                return await request();
+                return await request(cancellationToken);
             }
             catch (FlurlHttpException exception)
             {
                 if (exception.Call.AccessTokenIsExpired())
                 {
-                    return await RefreshTokenThenRetry(request);
+                    return await RefreshTokenThenRetry(request, cancellationToken);
                 }
 
                 new RestResponseValidator()
                     .ThrowExceptionForStatusCode(exception.Call.Request.Url, exception.Call.Succeeded,
-                        (HttpStatusCode?)exception.Call.Response?.StatusCode, exception, await GetBodyAsync(exception));
+                        (HttpStatusCode?)exception.Call.Response?.StatusCode, exception, await GetBodyAsync(exception, cancellationToken));
                 throw;
             }
         }
 
-        protected override async Task ExecuteAsync(Func<Task> request)
+        protected override async Task ExecuteAsync(Func<CancellationToken, Task> request, CancellationToken cancellationToken)
         {
-            await LoginWhenLoggedOut();
+            await LoginWhenLoggedOut(cancellationToken);
             try
             {
-                await request();
+                await request(cancellationToken);
             }
             catch (FlurlHttpException exception)
             {
                 if (exception.Call.AccessTokenIsExpired())
                 {
-                    await RefreshTokenThenRetry(request);
+                    await RefreshTokenThenRetry(request, cancellationToken);
                 }
 
                 new RestResponseValidator()
                     .ThrowExceptionForStatusCode(exception.Call.Request.Url, exception.Call.Succeeded,
-                        (HttpStatusCode?)exception.Call.Response?.StatusCode, exception, await GetBodyAsync(exception));
+                        (HttpStatusCode?)exception.Call.Response?.StatusCode, exception, await GetBodyAsync(exception, cancellationToken));
                 throw;
             }
         }
 
-        protected async Task LoginWhenLoggedOut()
+        protected async Task LoginWhenLoggedOut(CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(AccessInformation.AccessToken))
                 await GetRefreshTokenHandler()
-                    .Login();
+                    .Login(cancellationToken);
         }
 
-        private async Task<TResult> RefreshTokenThenRetry<TResult>(Func<Task<TResult>> action)
+        private async Task<TResult> RefreshTokenThenRetry<TResult>(Func<CancellationToken, Task<TResult>> action, CancellationToken cancellationToken)
         {
-            await GetRefreshTokenHandler().RefreshToken();
-            return await action();
+            await GetRefreshTokenHandler().RefreshToken(cancellationToken);
+            return await action(cancellationToken);
         }
-        private async Task RefreshTokenThenRetry(Func<Task> action)
+
+        private async Task RefreshTokenThenRetry(Func<CancellationToken, Task> action, CancellationToken cancellationToken)
         {
-            await GetRefreshTokenHandler().RefreshToken();
-            await action();
+            await GetRefreshTokenHandler().RefreshToken(cancellationToken);
+            await action(cancellationToken);
         }
 
         private RefreshTokenHandler GetRefreshTokenHandler()

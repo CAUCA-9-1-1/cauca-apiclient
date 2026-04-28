@@ -1,12 +1,12 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
-namespace Cauca.ApiClient.Services.Interfaces
+namespace Cauca.ApiClient.Services.Interfaces;
+
+public interface IBaseService
 {
-    public interface IBaseService
-    {
-        Task<TResult> PostAsync<TResult>(string url, object entity);
-        Task<TResult> PutAsync<TResult>(string url, object entity);
-        Task<TResult> DeleteAsync<TResult>(string url);
-        Task<TResult> GetAsync<TResult>(string url);
-    }
+    Task<TResult> PostAsync<TResult>(string url, object entity, CancellationToken cancellationToken = default);
+    Task<TResult> PutAsync<TResult>(string url, object entity, CancellationToken cancellationToken = default);
+    Task<TResult> DeleteAsync<TResult>(string url, CancellationToken cancellationToken = default);
+    Task<TResult> GetAsync<TResult>(string url, CancellationToken cancellationToken = default);
 }

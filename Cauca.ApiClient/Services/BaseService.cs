@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Services.Interfaces;
@@ -29,116 +30,116 @@ namespace Cauca.ApiClient.Services
             ApiPrefix = apiPrefix;
         }
 
-        public async Task<TResult> PostAsync<TResult>(string url, object entity)
+        public async Task<TResult> PostAsync<TResult>(string url, object entity, CancellationToken cancellationToken = default)
         {
-            return await ExecuteAsync(() => ExecutePostAsync<TResult>(GenerateRequest(url), entity));
+            return await ExecuteAsync(ct => ExecutePostAsync<TResult>(GenerateRequest(url), entity, ct), cancellationToken);
         }
 
-        public async Task PostAsync(string url, object entity)
+        public async Task PostAsync(string url, object entity, CancellationToken cancellationToken = default)
         {
-            await ExecuteAsync(() => ExecutePostAsync(GenerateRequest(url), entity));
+            await ExecuteAsync(ct => ExecutePostAsync(GenerateRequest(url), entity, ct), cancellationToken);
         }
 
-        public async Task<TResult> PutAsync<TResult>(string url, object entity)
+        public async Task<TResult> PutAsync<TResult>(string url, object entity, CancellationToken cancellationToken = default)
         {
-            return await ExecuteAsync(() => ExecutePutAsync<TResult>(GenerateRequest(url), entity));
+            return await ExecuteAsync(ct => ExecutePutAsync<TResult>(GenerateRequest(url), entity, ct), cancellationToken);
         }
 
-        public async Task<TResult> DeleteAsync<TResult>(string url)
+        public async Task<TResult> DeleteAsync<TResult>(string url, CancellationToken cancellationToken = default)
         {
-            return await ExecuteAsync(() => ExecuteDeleteAsync<TResult>(GenerateRequest(url)));
+            return await ExecuteAsync(ct => ExecuteDeleteAsync<TResult>(GenerateRequest(url), ct), cancellationToken);
         }
 
-        public async Task DeleteAsync(string url)
+        public async Task DeleteAsync(string url, CancellationToken cancellationToken = default)
         {
-            await ExecuteAsync(() => ExecuteDeleteAsync(GenerateRequest(url)));
+            await ExecuteAsync(ct => ExecuteDeleteAsync(GenerateRequest(url), ct), cancellationToken);
         }
 
-        public async Task DeleteAsync(string url, object entity)
+        public async Task DeleteAsync(string url, object entity, CancellationToken cancellationToken = default)
         {
-            await ExecuteAsync(() => ExecuteDeleteAsync(GenerateRequest(url), entity));
+            await ExecuteAsync(ct => ExecuteDeleteAsync(GenerateRequest(url), entity, ct), cancellationToken);
         }
 
-        public async Task<TResult> GetAsync<TResult>(string url)
+        public async Task<TResult> GetAsync<TResult>(string url, CancellationToken cancellationToken = default)
         {
-            return await ExecuteAsync(() => ExecuteGetAsync<TResult>(GenerateRequest(url)));
+            return await ExecuteAsync(ct => ExecuteGetAsync<TResult>(GenerateRequest(url), ct), cancellationToken);
         }
 
-        public async Task GetAsync(string url)
+        public async Task GetAsync(string url, CancellationToken cancellationToken = default)
         {
-            await ExecuteAsync(() => ExecuteGetAsync(GenerateRequest(url)));
+            await ExecuteAsync(ct => ExecuteGetAsync(GenerateRequest(url), ct), cancellationToken);
         }
 
-        public async Task<byte[]> GetBytesAsync(string url)
+        public async Task<byte[]> GetBytesAsync(string url, CancellationToken cancellationToken = default)
         {
-            return await ExecuteAsync(() => ExecuteGetBytesAsync(GenerateRequest(url)));
+            return await ExecuteAsync(ct => ExecuteGetBytesAsync(GenerateRequest(url), ct), cancellationToken);
         }
 
-        public async Task<Stream> GetStreamAsync(string url)
+        public async Task<Stream> GetStreamAsync(string url, CancellationToken cancellationToken = default)
         {
-            return await ExecuteAsync(() => ExecuteGetStreamAsync(GenerateRequest(url)));
+            return await ExecuteAsync(ct => ExecuteGetStreamAsync(GenerateRequest(url), ct), cancellationToken);
         }
 
-        public async Task<byte[]> PostAndReceiveBytesAsync(string url, object entity)
+        public async Task<byte[]> PostAndReceiveBytesAsync(string url, object entity, CancellationToken cancellationToken = default)
         {
-            return await ExecuteAsync(() => ExecutePostAndReceiveBytesAsync(GenerateRequest(url), entity));
+            return await ExecuteAsync(ct => ExecutePostAndReceiveBytesAsync(GenerateRequest(url), entity, ct), cancellationToken);
         }
 
-        public async Task<Stream> PostAndReceiveStreamAsync(string url, object entity)
+        public async Task<Stream> PostAndReceiveStreamAsync(string url, object entity, CancellationToken cancellationToken = default)
         {
-            return await ExecuteAsync(() => ExecutePostAndReceiveStreamAsync(GenerateRequest(url), entity));
+            return await ExecuteAsync(ct => ExecutePostAndReceiveStreamAsync(GenerateRequest(url), entity, ct), cancellationToken);
         }
 
-        public async Task<string> GetStringAsync(string url)
+        public async Task<string> GetStringAsync(string url, CancellationToken cancellationToken = default)
         {
-            return await ExecuteAsync(() => ExecuteGetStringAsync(GenerateRequest(url)));
+            return await ExecuteAsync(ct => ExecuteGetStringAsync(GenerateRequest(url), ct), cancellationToken);
         }
 
-        protected async Task<T> PostFileAsync<T>(string url, string filename, Stream stream, string contentType)
-        {
-            stream.Position = 0;
-            return await ExecuteAsync(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType)));
-        }
-
-        protected async Task<T> PostFileAsync<T>(string url, string fileFullPath, string fileName)
-        {
-            return await ExecuteAsync(() => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath)));
-        }
-
-        protected async Task PostFileAsync(string url, string filename, Stream stream, string contentType)
+        protected async Task<T> PostFileAsync<T>(string url, string filename, Stream stream, string contentType, CancellationToken cancellationToken = default)
         {
             stream.Position = 0;
-            await ExecuteAsync(() => ExecutePostStreamAsync(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType)));
+            return await ExecuteAsync(ct => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType), ct), cancellationToken);
         }
 
-        protected async Task PostFileAsync(string url, string fileFullPath, string fileName)
+        protected async Task<T> PostFileAsync<T>(string url, string fileFullPath, string fileName, CancellationToken cancellationToken = default)
         {
-            await ExecuteAsync(() => ExecutePostStreamAsync(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath)));
+            return await ExecuteAsync(ct => ExecutePostStreamAsync<T>(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath), ct), cancellationToken);
         }
 
-        protected virtual async Task<TResult> ExecuteAsync<TResult>(Func<Task<TResult>> request)
+        protected async Task PostFileAsync(string url, string filename, Stream stream, string contentType, CancellationToken cancellationToken = default)
+        {
+            stream.Position = 0;
+            await ExecuteAsync(ct => ExecutePostStreamAsync(GenerateRequest(url), mp => mp.AddFile(filename, stream, filename, contentType), ct), cancellationToken);
+        }
+
+        protected async Task PostFileAsync(string url, string fileFullPath, string fileName, CancellationToken cancellationToken = default)
+        {
+            await ExecuteAsync(ct => ExecutePostStreamAsync(GenerateRequest(url), mp => mp.AddFile(fileName, fileFullPath), ct), cancellationToken);
+        }
+
+        protected virtual async Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> request, CancellationToken cancellationToken)
         {
             try
             {
-                return await request();
+                return await request(cancellationToken);
             }
             catch (FlurlHttpException exception)
             {
-                var body = await GetBodyAsync(exception);
+                var body = await GetBodyAsync(exception, cancellationToken);
                 new RestResponseValidator()
                     .ThrowExceptionForStatusCode(exception.Call!.Request.Url, exception.Call.Succeeded, (HttpStatusCode?)exception.Call.Response?.StatusCode, exception, body);
                 throw;
             }
         }
 
-        protected static async Task<string> GetBodyAsync(FlurlHttpException exception)
+        protected static async Task<string> GetBodyAsync(FlurlHttpException exception, CancellationToken cancellationToken)
         {
             try
             {
                 if (exception.Call?.Response is FlurlResponse { ResponseMessage.Content: CapturedStringContent content })
                     return content.Content;
                 if (exception.Call?.Response is FlurlResponse response && response.ResponseMessage.Content is HttpContent httpContent)
-                    return await httpContent.ReadAsStringAsync();
+                    return await httpContent.ReadAsStringAsync(cancellationToken);
                 if (exception.Call?.Response is FlurlResponse)
                     return await exception.Call.Response.GetStringAsync();
             }
@@ -149,16 +150,16 @@ namespace Cauca.ApiClient.Services
             return null;
         }
 
-        protected virtual async Task ExecuteAsync(Func<Task> request)
+        protected virtual async Task ExecuteAsync(Func<CancellationToken, Task> request, CancellationToken cancellationToken)
         {
             try
             {
-                await request();
+                await request(cancellationToken);
             }
             catch (FlurlHttpException exception)
             {
                 new RestResponseValidator()
-                    .ThrowExceptionForStatusCode(exception.Call.Request.Url, exception.Call.Succeeded, (HttpStatusCode?)exception.Call.Response?.StatusCode, exception, await GetBodyAsync(exception));
+                    .ThrowExceptionForStatusCode(exception.Call.Request.Url, exception.Call.Succeeded, (HttpStatusCode?)exception.Call.Response?.StatusCode, exception, await GetBodyAsync(exception, cancellationToken));
                 throw;
             }
         }
@@ -176,32 +177,32 @@ namespace Cauca.ApiClient.Services
                 .WithTimeout(TimeSpan.FromSeconds(Configuration.RequestTimeoutInSeconds));
         }
 
-        protected async Task ExecutePostAsync(IFlurlRequest request, object entity)
+        protected async Task ExecutePostAsync(IFlurlRequest request, object entity, CancellationToken cancellationToken)
         {
-            await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity));
+            await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity, cancellationToken: cancellationToken));
         }
 
-        protected async Task<TResult> ExecutePostAsync<TResult>(IFlurlRequest request, object entity)
+        protected async Task<TResult> ExecutePostAsync<TResult>(IFlurlRequest request, object entity, CancellationToken cancellationToken)
         {
             var type = typeof(TResult);
             if (type == typeof(string))
             {
                 var response = await RetryPolicy.ExecuteAsync(() => request
-                    .PostJsonAsync(entity)
+                    .PostJsonAsync(entity, cancellationToken: cancellationToken)
                     .ReceiveString());
                 return (TResult)Convert.ChangeType(response, typeof(TResult));
             }
             else if (type == typeof(bool))
             {
                 var response = (await RetryPolicy.ExecuteAsync(() => request
-                    .PostJsonAsync(entity)
+                    .PostJsonAsync(entity, cancellationToken: cancellationToken)
                     .ReceiveString())).ToUpper() == "TRUE";
                 return (TResult)Convert.ChangeType(response, typeof(TResult));
             }
             else if (type == typeof(int))
             {
                 var response = await RetryPolicy.ExecuteAsync(() => request
-                    .PostJsonAsync(entity)
+                    .PostJsonAsync(entity, cancellationToken: cancellationToken)
                     .ReceiveString());
                 if (int.TryParse(response, out int result))
                 {
@@ -213,27 +214,27 @@ namespace Cauca.ApiClient.Services
             else
             {
                 return await RetryPolicy.ExecuteAsync(() => request
-                    .PostJsonAsync(entity)
+                    .PostJsonAsync(entity, cancellationToken: cancellationToken)
                     .ReceiveJson<TResult>());
             }
         }
 
-        protected async Task<TResult> ExecuteGetAsync<TResult>(IFlurlRequest request)
+        protected async Task<TResult> ExecuteGetAsync<TResult>(IFlurlRequest request, CancellationToken cancellationToken)
         {
             var type = typeof(TResult);
             if (type == typeof(string))
             {
-                var response = await RetryPolicy.ExecuteAsync(() => request.GetStringAsync());
+                var response = await RetryPolicy.ExecuteAsync(() => request.GetStringAsync(cancellationToken: cancellationToken));
                 return (TResult) Convert.ChangeType(response, typeof(TResult));
             }
             else if (type == typeof(bool))
             {
-                var response = (await RetryPolicy.ExecuteAsync(() => request.GetStringAsync())).ToUpper() == "TRUE";
+                var response = (await RetryPolicy.ExecuteAsync(() => request.GetStringAsync(cancellationToken: cancellationToken))).ToUpper() == "TRUE";
                 return (TResult)Convert.ChangeType(response, typeof(TResult));
             }
             else if (type == typeof(int))
             {
-                var response = await RetryPolicy.ExecuteAsync(() => request.GetStringAsync());
+                var response = await RetryPolicy.ExecuteAsync(() => request.GetStringAsync(cancellationToken: cancellationToken));
                 if (int.TryParse(response, out int result))
                 {
                     return (TResult)Convert.ChangeType(result, typeof(TResult));
@@ -244,79 +245,79 @@ namespace Cauca.ApiClient.Services
             else
             {
                 return await RetryPolicy.ExecuteAsync(() => request
-                    .GetJsonAsync<TResult>());
+                    .GetJsonAsync<TResult>(cancellationToken: cancellationToken));
             }
         }
 
-        protected async Task ExecuteGetAsync(IFlurlRequest request)
+        protected async Task ExecuteGetAsync(IFlurlRequest request, CancellationToken cancellationToken)
         {
             await RetryPolicy.ExecuteAsync(() => request
-                .GetAsync());
+                .GetAsync(cancellationToken: cancellationToken));
         }
 
-        protected async Task<Stream> ExecuteGetStreamAsync(IFlurlRequest request)
+        protected async Task<Stream> ExecuteGetStreamAsync(IFlurlRequest request, CancellationToken cancellationToken)
         {
-            return await RetryPolicy.ExecuteAsync(() => request.GetStreamAsync());
+            return await RetryPolicy.ExecuteAsync(() => request.GetStreamAsync(cancellationToken: cancellationToken));
         }
 
-        protected async Task<string> ExecuteGetStringAsync(IFlurlRequest request)
+        protected async Task<string> ExecuteGetStringAsync(IFlurlRequest request, CancellationToken cancellationToken)
         {
-            return await RetryPolicy.ExecuteAsync(() => request.GetStringAsync());
+            return await RetryPolicy.ExecuteAsync(() => request.GetStringAsync(cancellationToken: cancellationToken));
         }
 
-        protected async Task<byte[]> ExecuteGetBytesAsync(IFlurlRequest request)
+        protected async Task<byte[]> ExecuteGetBytesAsync(IFlurlRequest request, CancellationToken cancellationToken)
         {
-            return await RetryPolicy.ExecuteAsync(() => request.GetBytesAsync());
+            return await RetryPolicy.ExecuteAsync(() => request.GetBytesAsync(cancellationToken: cancellationToken));
         }
 
-        protected async Task<TResult> ExecutePutAsync<TResult>(IFlurlRequest request, object entity)
+        protected async Task<TResult> ExecutePutAsync<TResult>(IFlurlRequest request, object entity, CancellationToken cancellationToken)
         {
             return await RetryPolicy.ExecuteAsync(() => request
-                .PutJsonAsync(entity)
+                .PutJsonAsync(entity, cancellationToken: cancellationToken)
                 .ReceiveJson<TResult>());
         }
 
-        protected async Task<TResult> ExecuteDeleteAsync<TResult>(IFlurlRequest request)
+        protected async Task<TResult> ExecuteDeleteAsync<TResult>(IFlurlRequest request, CancellationToken cancellationToken)
         {
             return await RetryPolicy.ExecuteAsync(() => request
-                .DeleteAsync()
+                .DeleteAsync(cancellationToken: cancellationToken)
                 .ReceiveJson<TResult>());
         }
 
 
-        protected async Task ExecuteDeleteAsync(IFlurlRequest request)
+        protected async Task ExecuteDeleteAsync(IFlurlRequest request, CancellationToken cancellationToken)
         {
             await RetryPolicy.ExecuteAsync(() => request
-                .DeleteAsync());
+                .DeleteAsync(cancellationToken: cancellationToken));
         }
 
-        protected async Task ExecuteDeleteAsync(IFlurlRequest request, object entity)
+        protected async Task ExecuteDeleteAsync(IFlurlRequest request, object entity, CancellationToken cancellationToken)
         {
             await RetryPolicy.ExecuteAsync(() => request
-                .SendJsonAsync(HttpMethod.Delete, entity));
+                .SendJsonAsync(HttpMethod.Delete, entity, cancellationToken: cancellationToken));
         }
 
-        protected async Task<TResult> ExecutePostStreamAsync<TResult>(IFlurlRequest request, Action<CapturedMultipartContent> action)
+        protected async Task<TResult> ExecutePostStreamAsync<TResult>(IFlurlRequest request, Action<CapturedMultipartContent> action, CancellationToken cancellationToken)
         {
             return await request
-                .PostMultipartAsync(action)
+                .PostMultipartAsync(action, cancellationToken: cancellationToken)
                 .ReceiveJson<TResult>();
         }
 
-        protected async Task ExecutePostStreamAsync(IFlurlRequest request, Action<CapturedMultipartContent> action)
+        protected async Task ExecutePostStreamAsync(IFlurlRequest request, Action<CapturedMultipartContent> action, CancellationToken cancellationToken)
         {
             await request
-                .PostMultipartAsync(action);
+                .PostMultipartAsync(action, cancellationToken: cancellationToken);
         }
 
-        protected async Task<byte[]> ExecutePostAndReceiveBytesAsync(IFlurlRequest request, object entity)
+        protected async Task<byte[]> ExecutePostAndReceiveBytesAsync(IFlurlRequest request, object entity, CancellationToken cancellationToken)
         {
-            return await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity).ReceiveBytes ());
+            return await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity, cancellationToken: cancellationToken).ReceiveBytes());
         }
 
-        protected async Task<Stream> ExecutePostAndReceiveStreamAsync(IFlurlRequest request, object entity)
+        protected async Task<Stream> ExecutePostAndReceiveStreamAsync(IFlurlRequest request, object entity, CancellationToken cancellationToken)
         {
-            return await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity).ReceiveStream());
+            return await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity, cancellationToken: cancellationToken).ReceiveStream());
         }
 
     }
