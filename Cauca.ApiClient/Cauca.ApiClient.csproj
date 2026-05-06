@@ -8,11 +8,11 @@
     <Copyright>2026</Copyright>
     <PackageProjectUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</RepositoryUrl>
-    <Version>4.0.0</Version>
-    <AssemblyVersion>4.0.0.0</AssemblyVersion>
-    <FileVersion>4.0.0.0</FileVersion>
+    <Version>4.0.1</Version>
+    <AssemblyVersion>4.0.1.0</AssemblyVersion>
+    <FileVersion>4.0.1.0</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageReleaseNotes>Bump to DotNet 10 and add cancellation token support to everything.</PackageReleaseNotes>
+    <PackageReleaseNotes>More details in the retry logs.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
