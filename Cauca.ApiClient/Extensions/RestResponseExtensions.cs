@@ -1,5 +1,5 @@
-﻿using System.Linq;
-using System.Net;
+﻿using System.Net;
+using System.Linq;
 using Flurl.Http;
 
 namespace Cauca.ApiClient.Extensions

@@ -1,6 +1,8 @@
-﻿using Flurl.Http;
-using System;
+﻿using System;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Cauca.ApiClient.Services;
+using Flurl.Http;
 
 namespace Cauca.ApiClient.Exceptions;
 
@@ -22,7 +24,11 @@ public abstract class ApiClientException : Exception
     public async Task<T> GetResponseAsync<T>()
     {
         if (InnerException is FlurlHttpException flurlException)
-            return await flurlException.GetResponseJsonAsync<T>();			
+            return await flurlException.GetResponseJsonAsync<T>();
+
+        await Task.CompletedTask;
+        if (InnerException is ApiHttpException apiException && !string.IsNullOrWhiteSpace(apiException.ResponseBody))
+            return JsonSerializer.Deserialize<T>(apiException.ResponseBody);
         return default(T);
     }
 
@@ -30,6 +36,10 @@ public abstract class ApiClientException : Exception
     {
         if (InnerException is FlurlHttpException flurlException)
             return await flurlException.GetResponseStringAsync();
+
+        await Task.CompletedTask;
+        if (InnerException is ApiHttpException apiException)
+            return apiException.ResponseBody;
         return null;
     }
 }

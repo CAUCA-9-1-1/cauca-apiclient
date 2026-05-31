@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -13,6 +13,7 @@ using Polly;
 
 namespace Cauca.ApiClient.Services
 {
+    [Obsolete("BaseService<TConfiguration> is deprecated. Use FluentBaseService<TConfiguration> for new development.")]
     public abstract class BaseService<TConfiguration> : IBaseService
         where TConfiguration : IConfiguration
     {
@@ -319,6 +320,5 @@ namespace Cauca.ApiClient.Services
         {
             return await RetryPolicy.ExecuteAsync(() => request.PostJsonAsync(entity, cancellationToken: cancellationToken).ReceiveStream());
         }
-
     }
 }

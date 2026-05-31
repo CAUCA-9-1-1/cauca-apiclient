@@ -1,82 +1,84 @@
-﻿using Cauca.ApiClient.Configuration;
+﻿using System.Threading.Tasks;
+using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Services;
+using Cauca.ApiClient.Tests.Helpers;
 using Cauca.ApiClient.Tests.Mocks;
-using Flurl.Http.Testing;
 using NUnit.Framework;
 using Polly;
-using System.Threading.Tasks;
 
-namespace Cauca.ApiClient.Tests.Services
+namespace Cauca.ApiClient.Tests.Services;
+
+[TestFixture]
+internal class RefreshTokenHandlerRetryTests
 {
+    private IConfiguration configuration;
+    private IAsyncPolicy twoRetryPolicy;
+    private AccessInformation accessInformation;
 
-
-    [TestFixture]
-    internal class RefreshTokenHandlerRetryTests
+    [SetUp]
+    public void SetupTest()
     {
-        private IConfiguration configuration;
-        private IAsyncPolicy twoRetryPolicy;
-        private AccessInformation accessInformation;
-        private RefreshTokenHandler tokenHandler;
-
-        [SetUp]
-        public void SetupTest()
+        twoRetryPolicy = new InstantRetryBuilder().BuildRetryPolicy(2);
+        accessInformation = new AccessInformation
         {
-            twoRetryPolicy = new InstantRetryBuilder().BuildRetryPolicy(2);
-            accessInformation = new AccessInformation
-            {
-                AccessToken = "accesstoken",
-                RefreshToken = "refreshtoken",
-                AuthorizationType = "bearer"
-            };
-            configuration = new MockConfiguration
-            {
-                ApiBaseUrl = "http://test",
-                UseExternalSystemLogin = false
-            };
-
-            tokenHandler = new RefreshTokenHandler(configuration, accessInformation, twoRetryPolicy);
-        }
-
-        [Test]
-        public async Task OnTransientFailure_WhenLoggingIn_ShouldRetry()
+            AccessToken = "accesstoken",
+            RefreshToken = "refreshtoken",
+            AuthorizationType = "bearer"
+        };
+        configuration = new MockConfiguration
         {
-            var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = null;
-            using var httpTest = new HttpTest();
-            httpTest.RespondWith(status: 502);
-            httpTest.RespondWithJson(loginResult);
+            ApiBaseUrl = "http://test",
+            UseExternalSystemLogin = false,
+            UserId = "user",
+            Password = "password"
+        };
+    }
 
-            await tokenHandler.Login();
+    [Test]
+    public async Task OnTransientFailure_WhenLoggingIn_ShouldRetry()
+    {
+        var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(System.Net.HttpStatusCode.BadGateway);
+        handler.EnqueueJsonResponse(loginResult);
+        var tokenHandler = new RefreshTokenHandler(configuration, accessInformation, twoRetryPolicy, handler.CreateClientFactory());
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrl}/Authentication/logon").Times(2);
-        }
+        await tokenHandler.Login();
 
-        [Test]
-        public async Task OnConnectionTimeOut_WhenLoggingIn_ShouldRetry()
-        {
-            var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = null;
-            using var httpTest = new HttpTest();
-            httpTest.SimulateTimeout();
-            httpTest.RespondWithJson(loginResult);
+        Assert.That(handler.Requests.Count, Is.EqualTo(2));
+        Assert.That(handler.Requests[0].RequestUri, Is.EqualTo($"{configuration.ApiBaseUrl}/Authentication/logon"));
+        Assert.That(handler.Requests[1].RequestUri, Is.EqualTo($"{configuration.ApiBaseUrl}/Authentication/logon"));
+    }
 
-            await tokenHandler.Login();
+    [Test]
+    public async Task OnConnectionTimeOut_WhenLoggingIn_ShouldRetry()
+    {
+        var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueTimeout();
+        handler.EnqueueJsonResponse(loginResult);
+        var tokenHandler = new RefreshTokenHandler(configuration, accessInformation, twoRetryPolicy, handler.CreateClientFactory());
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrl}/Authentication/logon").Times(2);
-        }
+        await tokenHandler.Login();
 
-        [Test]
-        public async Task OnTransientFailure_WhenRefreshingToken_ShouldRetry()
-        {
-            var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = null;
-            using var httpTest = new HttpTest();
-            httpTest.RespondWith(status: 502);
-            httpTest.RespondWithJson(loginResult);
+        Assert.That(handler.Requests.Count, Is.EqualTo(2));
+        Assert.That(handler.Requests[0].RequestUri, Is.EqualTo($"{configuration.ApiBaseUrl}/Authentication/logon"));
+        Assert.That(handler.Requests[1].RequestUri, Is.EqualTo($"{configuration.ApiBaseUrl}/Authentication/logon"));
+    }
 
-            await tokenHandler.RefreshToken();
+    [Test]
+    public async Task OnTransientFailure_WhenRefreshingToken_ShouldRetry()
+    {
+        var refreshResult = new TokenRefreshResult { AccessToken = "NewAccessToken" };
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(System.Net.HttpStatusCode.BadGateway);
+        handler.EnqueueJsonResponse(refreshResult);
+        var tokenHandler = new RefreshTokenHandler(configuration, accessInformation, twoRetryPolicy, handler.CreateClientFactory());
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrl}/Authentication/refresh").Times(2);
-        }
+        await tokenHandler.RefreshToken();
+
+        Assert.That(handler.Requests.Count, Is.EqualTo(2));
+        Assert.That(handler.Requests[0].RequestUri, Is.EqualTo($"{configuration.ApiBaseUrl}/Authentication/refresh"));
+        Assert.That(handler.Requests[1].RequestUri, Is.EqualTo($"{configuration.ApiBaseUrl}/Authentication/refresh"));
     }
 }

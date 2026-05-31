@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Net.Http;
 using Cauca.ApiClient.Services;
+using Cauca.ApiClient.Tests.Helpers;
 using Cauca.ApiClient.Tests.Mocks;
 using FluentAssertions;
-using Flurl.Http;
 using NUnit.Framework;
 
 namespace Cauca.ApiClient.Tests.Services;
@@ -55,22 +54,26 @@ public class ConfigurationExtensionsTests
     [Test]
     public void NoPrefix_WhenGeneratingRequest_ShouldNotHavePrefix()
     {
-        var client = new HttpClient();
-        client.BaseAddress = new Uri("https://api.example.com");
-        
-        var request = new FlurlClient(client).AppendRequest(null, "tests");
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse();
+        var configuration = new MockConfiguration { ApiBaseUrl = "https://api.example.com" };
+        var repository = new MockRepository(configuration, handler.CreateClientFactory());
 
-        request.Url.ToString().Should().Be("https://api.example.com/tests");
+        _ = repository.GetStringAsync("tests").Result;
+
+        handler.Requests.Should().ContainSingle().Which.RequestUri.Should().Be("https://api.example.com/tests");
     }
 
     [Test]
     public void WithPrefix_WhenGeneratingRequest_ShouldHavePrefix()
     {
-        var client = new HttpClient();
-        client.BaseAddress = new Uri("https://api.example.com");
-     
-        var request = new FlurlClient(client).AppendRequest("prefix", "tests");
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse();
+        var configuration = new MockConfiguration { ApiBaseUrl = "https://api.example.com" };
+        var repository = new MockRepository(configuration, handler.CreateClientFactory(), "prefix");
+
+        _ = repository.GetStringAsync("tests").Result;
         
-        request.Url.ToString().Should().Be("https://api.example.com/prefix/tests");
+        handler.Requests.Should().ContainSingle().Which.RequestUri.Should().Be("https://api.example.com/prefix/tests");
     }
 }

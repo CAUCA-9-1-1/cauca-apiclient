@@ -1,5 +1,5 @@
-﻿using Flurl.Http;
-using System;
+﻿using System;
+using Flurl.Http;
 
 namespace Cauca.ApiClient.Exceptions;
 

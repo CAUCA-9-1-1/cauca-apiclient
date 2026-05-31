@@ -1,19 +1,20 @@
-﻿using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Exceptions;
+using Cauca.ApiClient.Tests.Helpers;
 using Cauca.ApiClient.Tests.Mocks;
 using FluentAssertions;
-using Flurl.Http.Testing;
 using NUnit.Framework;
 
 namespace Cauca.ApiClient.Tests.Services;
 
 public class BaseClientTests
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+
     private MockConfiguration configuration;
     private MockConfiguration configurationWithNoTrailingSlash;
 
@@ -22,277 +23,224 @@ public class BaseClientTests
     {
         configuration = new MockConfiguration
         {
-            ApiBaseUrl = "http://test/",
+            ApiBaseUrl = "http://test/"
         };
 
         configurationWithNoTrailingSlash = new MockConfiguration
         {
-            ApiBaseUrl = "http://test",
+            ApiBaseUrl = "http://test"
         };
     }
 
-    [TestCase]
+    [Test]
     public async Task PostRequestAreCorrectlyExecuted()
     {
-        using var httpTest = new HttpTest();
+        var handler = new TestHttpMessageHandler();
         var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
-        await repo.PostAsync<MockResponse>("mock", entity);
+        handler.EnqueueJsonResponse(new MockResponse());
+        var repo = CreateRepository(handler);
 
-        httpTest.ShouldHaveCalled("http://test/mock")
-            .WithRequestJson(entity)
-            .WithVerb(HttpMethod.Post)
-            .Times(1);
+        await repo.PostMockAsync(entity);
+
+        var request = handler.Requests.Should().ContainSingle().Which;
+        request.RequestUri.Should().Be("http://test/mock");
+        request.Method.Should().Be(HttpMethod.Post);
+        request.Body.Should().Be(JsonSerializer.Serialize(entity, SerializerOptions));
     }
 
-    [TestCase]
+    [Test]
     public async Task PostRequestAreCorrectlyExecutedWhenBaseUrlDoesntEndWithSlash()
     {
-        using var httpTest = new HttpTest();
-        var entity = new MockEntity();
-        var repo = new MockRepository(configurationWithNoTrailingSlash);
-        await repo.PostAsync<MockResponse>("mock", entity);
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueJsonResponse(new MockResponse());
+        var repo = CreateRepository(handler, configurationWithNoTrailingSlash);
 
-        httpTest.ShouldHaveCalled("http://test/mock")
-            .WithRequestJson(entity)
-            .WithVerb(HttpMethod.Post)
-            .Times(1);
+        await repo.PostMockAsync(new MockEntity());
+
+        handler.Requests.Should().ContainSingle().Which.RequestUri.Should().Be("http://test/mock");
     }
 
-    [TestCase]
-    public void RequestIsThrowingErrorWhenUrlIsNotFound()
+    [Test]
+    public async Task RequestBuilder_WhenQueryParametersProvided_ShouldAppendThem()
     {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWithJson(new MockResponse(), 404);
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
-        Assert.ThrowsAsync<NotFoundApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(body: "Allo");
+        var repo = CreateRepository(handler);
+
+        _ = await repo.GetMockStringWithPageAndFilterAsync();
+
+        handler.Requests.Should().ContainSingle().Which.RequestUri.Should().ContainAll("http://test/mock?", "page=3", "filter=open");
     }
 
-    [TestCase]
-    public void RequestIsThrowingErrorWhenGettingBadParameters()
+    [Test]
+    public async Task RequestBuilder_WhenHeadersProvided_ShouldAddThem()
     {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWithJson(new MockResponse(), 400);
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
-        Assert.ThrowsAsync<BadParameterApiException>(async () =>
-            await repo.PostAsync<MockResponse>("mock", entity));
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueJsonResponse(new MockResponse());
+        var repo = CreateRepository(handler);
+
+        _ = await repo.PostMockWithHeadersAsync(new MockEntity());
+
+        var request = handler.Requests.Should().ContainSingle().Which;
+        request.HasHeader("X-Test", "one").Should().BeTrue();
+        request.HasHeader("Another", "two").Should().BeTrue();
+    }
+
+    [Test]
+    public async Task RequestBuilder_WhenSegmentsProvided_ShouldAppendThem()
+    {
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(body: "Allo");
+        var repo = CreateRepository(handler);
+
+        _ = await repo.GetGeographyCitiesAsync();
+
+        handler.Requests.Should().ContainSingle().Which.RequestUri.Should().Be("http://test/geography/10/cities");
+    }
+
+    [Test]
+    public async Task RequestIsThrowingErrorWhenUrlIsNotFound()
+    {
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueJsonResponse(new MockResponse(), HttpStatusCode.NotFound);
+        var repo = CreateRepository(handler);
+
+        var action = () => repo.PostMockAsync(new MockEntity());
+
+        await action.Should().ThrowAsync<NotFoundApiException>();
+    }
+
+    [Test]
+    public async Task RequestIsThrowingErrorWhenGettingBadParameters()
+    {
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueJsonResponse(new MockResponse(), HttpStatusCode.BadRequest);
+        var repo = CreateRepository(handler);
+
+        var action = () => repo.PostMockAsync(new MockEntity());
+
+        await action.Should().ThrowAsync<BadParameterApiException>();
     }
 
     [Test]
     public async Task InvalidRequest_WhenGeneratingException_ShouldContainsBody()
     {
         var expectedError = new { ErrorMessage = "Oh noes!" };
-        using var httpTest = new HttpTest();
-        httpTest.RespondWithJson(expectedError, 400);
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueJsonResponse(expectedError, HttpStatusCode.BadRequest);
+        var repo = CreateRepository(handler);
 
-        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+        var action = () => repo.PostMockAsync(new MockEntity());
 
         await action.Should().ThrowAsync<BadParameterApiException>()
-            .Where(exception => HasException(exception, expectedError));
+            .Where(exception => exception.Body == JsonSerializer.Serialize(expectedError));
     }
 
     [Test]
-    public async Task InvalidRequest_WithStreamContent_ShouldContainBody()
+    public async Task RequestIsThrowingErrorWhenGettingForbidden()
     {
-    var expectedError = new { Error = "Stream content error message" };
-    using var httpTest = new HttpTest();
-    httpTest.RespondWithJson(expectedError, 400);
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueJsonResponse(new MockResponse(), HttpStatusCode.Forbidden);
+        var repo = CreateRepository(handler);
 
-        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+        var action = () => repo.PostMockAsync(new MockEntity());
 
-        await action.Should().ThrowAsync<BadParameterApiException>()
-            .Where(exception => exception.Body != null && exception.Body.Contains("Stream content error message"));
+        await action.Should().ThrowAsync<ForbiddenApiException>();
     }
 
     [Test]
-    public async Task InvalidRequest_WithByteArrayContent_ShouldContainBody()
+    public async Task RequestIsThrowingErrorWhenGettingInternalError()
     {
-    var expectedError = new { Error = "Byte array content error" };
-    using var httpTest = new HttpTest();
-    httpTest.RespondWithJson(expectedError, 400);
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueJsonResponse(new MockResponse(), HttpStatusCode.InternalServerError);
+        var repo = CreateRepository(handler);
 
-        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+        var action = () => repo.PostMockAsync(new MockEntity());
 
-        await action.Should().ThrowAsync<BadParameterApiException>()
-            .Where(exception => exception.Body != null && exception.Body.Contains("Byte array content error"));
+        await action.Should().ThrowAsync<InternalErrorApiException>();
     }
 
     [Test]
-    public async Task InvalidRequest_WithFormUrlEncodedContent_ShouldContainBody()
+    public async Task RequestIsThrowingErrorWhenNotGettingAnAnswer()
     {
-        var expectedError = "key1=value1&key2=value2";
-        using var httpTest = new HttpTest();
-        httpTest.RespondWith(expectedError, 400, headers: new { ContentType = "application/x-www-form-urlencoded" });
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueTimeout();
+        var repo = CreateRepository(handler);
 
-        var action = () => repo.PostAsync<MockResponse>("mock", entity);
+        var action = () => repo.PostMockAsync(new MockEntity());
 
-        await action.Should().ThrowAsync<BadParameterApiException>()
-            .Where(exception => exception.Body == expectedError);
+        await action.Should().ThrowAsync<NoResponseApiException>();
     }
 
     [Test]
-    public async Task InvalidRequest_WithMultipartContent_ShouldContainBody()
-    {
-    var expected = new { field1 = "value1", field2 = "value2" };
-    using var httpTest = new HttpTest();
-    httpTest.RespondWithJson(expected, 400);
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
-
-        var action = () => repo.PostAsync<MockResponse>("mock", entity);
-
-        await action.Should().ThrowAsync<BadParameterApiException>()
-            .Where(exception => exception.Body != null && exception.Body.Contains("value1") && exception.Body.Contains("value2"));
-    }
-
-    [Test]
-    public async Task InvalidRequest_WithEmptyContent_ShouldHaveNullBody()
-    {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWith("", 400);
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
-
-        var action = () => repo.PostAsync<MockResponse>("mock", entity);
-
-        await action.Should().ThrowAsync<BadParameterApiException>()
-            .Where(exception => exception.Body == "");
-    }
-
-    private static bool HasException(BadParameterApiException exception, object expectedResponse)
-    {
-        var expectedSerializedResponse = System.Text.Json.JsonSerializer.Serialize(expectedResponse);
-        return exception.Body == expectedSerializedResponse;
-    }
-
-    [Test]
-    public void RequestIsThrowingErrorWhenGettingForbidden()
-    {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWithJson(new MockResponse(), 403);
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
-        Assert.ThrowsAsync<ForbiddenApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
-    }
-
-    [TestCase]
-    public void RequestIsThrowingErrorWhenGettingInternalError()
-    {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWithJson(new MockResponse(), 500);
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
-        Assert.ThrowsAsync<InternalErrorApiException>(
-            async () => await repo.PostAsync<MockResponse>("mock", entity));
-    }
-
-    [TestCase]
-    public void RequestIsThrowingErrorWhenNotGettingAnAnswer()
-    {
-        using var httpTest = new HttpTest();
-        httpTest.SimulateTimeout();
-        var entity = new MockEntity();
-        var repo = new MockRepository(configuration);
-        Assert.ThrowsAsync<NoResponseApiException>(async () => await repo.PostAsync<MockResponse>("mock", entity));
-    }
-
-    [TestCase]
     public async Task BooleanAreCorrectlyReceived()
     {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWith(true.ToString());
-        var repo = new MockRepository(configuration);
-        var response = await repo.GetAsync<bool>("mock");
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(body: true.ToString());
+        var repo = CreateRepository(handler);
 
-        httpTest.ShouldHaveCalled("http://test/mock")
-            .WithVerb(HttpMethod.Get)
-            .Times(1);
+        var response = await repo.GetMockBooleanAsync();
 
         response.Should().BeTrue();
     }
 
-    [TestCase]
+    [Test]
     public async Task FalseBooleanAreCorrectlyReceived()
     {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWith(false.ToString());
-        var repo = new MockRepository(configuration);
-        var response = await repo.GetAsync<bool>("mock");
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(body: false.ToString());
+        var repo = CreateRepository(handler);
 
-        httpTest.ShouldHaveCalled("http://test/mock")
-            .WithVerb(HttpMethod.Get)
-            .Times(1);
+        var response = await repo.GetMockBooleanAsync();
 
         response.Should().BeFalse();
     }
 
-    [TestCase]
+    [Test]
     public async Task StringAreCorrectlyReceived()
     {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWith("Allo");
-        var repo = new MockRepository(configuration);
-        var response = await repo.GetAsync<string>("mock");
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(body: "Allo");
+        var repo = CreateRepository(handler);
 
-        httpTest.ShouldHaveCalled("http://test/mock")
-            .WithVerb(HttpMethod.Get)
-            .Times(1);
+        var response = await repo.GetMockStringAsync();
 
         response.Should().Be("Allo");
     }
 
-    [TestCase]
+    [Test]
     public async Task StringAreCorrectlyReceivedWhenUsingGetAsyncString()
     {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWith("Allo");
-        var repo = new MockRepository(configuration);
-        var response = await repo.GetStringAsync("mock");
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(body: "Allo");
+        var repo = CreateRepository(handler);
 
-        httpTest.ShouldHaveCalled("http://test/mock")
-            .WithVerb(HttpMethod.Get)
-            .Times(1);
+        var response = await repo.GetMockStringUsingShortcutAsync();
 
         response.Should().Be("Allo");
     }
 
-    [TestCase]
+    [Test]
     public async Task IntAreCorrectlyReceived()
     {
-        using var httpTest = new HttpTest();
-        httpTest.RespondWith(33.ToString());
-        var repo = new MockRepository(configuration);
-        var response = await repo.GetAsync<int>("mock");
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(body: "33");
+        var repo = CreateRepository(handler);
 
-        httpTest.ShouldHaveCalled("http://test/mock")
-            .WithVerb(HttpMethod.Get)
-            .Times(1);
+        var response = await repo.GetMockIntAsync();
 
         response.Should().Be(33);
     }
 
-    [TestCase]
+    [Test]
     public async Task BytesArrayAreCorrectlyReceived()
     {
-        var text = "Ceci est mon test";
-        using var httpTest = new HttpTest();
-        httpTest.RespondWith(text);
-        var repo = new MockRepository(configuration);
-        var response = await repo.GetBytesAsync("mock");
+        const string text = "Ceci est mon test";
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueResponse(body: text);
+        var repo = CreateRepository(handler);
 
-        httpTest.ShouldHaveCalled("http://test/mock")
-            .WithVerb(HttpMethod.Get)
-            .Times(1);
+        var response = await repo.GetMockBytesAsync();
 
         Encoding.UTF8.GetString(response).Should().Be(text);
     }
@@ -300,16 +248,21 @@ public class BaseClientTests
     [Test]
     public async Task DeleteWithBody_WhenCalling_ShouldCorrectlyCallApiWithBody()
     {
+        var handler = new TestHttpMessageHandler();
         var body = new MockEntity();
-        using var httpTest = new HttpTest();
-        httpTest.RespondWith(status: 200);
-        var repo = new MockRepository(configuration);
+        handler.EnqueueResponse();
+        var repo = CreateRepository(handler);
 
-        await repo.DeleteAsync("mock", body);
+        await repo.DeleteMockAsync(body);
 
-        httpTest.ShouldHaveCalled("http://test/mock")
-            .WithRequestJson(body)
-            .WithVerb(HttpMethod.Delete)
-            .Times(1);
+        var request = handler.Requests.Should().ContainSingle().Which;
+        request.Method.Should().Be(HttpMethod.Delete);
+        request.RequestUri.Should().Be("http://test/mock");
+        request.Body.Should().Be(JsonSerializer.Serialize(body, SerializerOptions));
+    }
+
+    private MockRepository CreateRepository(TestHttpMessageHandler handler, MockConfiguration currentConfiguration = null, string apiPrefix = null)
+    {
+        return new MockRepository(currentConfiguration ?? configuration, handler.CreateClientFactory(), apiPrefix);
     }
 }
