@@ -1,4 +1,5 @@
 ﻿using Cauca.ApiClient.Extensions;
+using Cauca.ApiClient.Services;
 using FluentAssertions;
 using NUnit.Framework;
 

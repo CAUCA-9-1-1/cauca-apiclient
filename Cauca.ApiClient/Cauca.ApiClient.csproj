@@ -8,11 +8,11 @@
     <Copyright>2026</Copyright>
     <PackageProjectUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</RepositoryUrl>
-    <Version>4.0.1</Version>
-    <AssemblyVersion>4.0.1.0</AssemblyVersion>
-    <FileVersion>4.0.1.0</FileVersion>
+    <Version>4.1.0-beta1</Version>
+    <AssemblyVersion>4.1.0.0</AssemblyVersion>
+    <FileVersion>4.1.0.0</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageReleaseNotes>More details in the retry logs.</PackageReleaseNotes>
+    <PackageReleaseNotes>Fluent API.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +20,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageReference Include="Polly" Version="8.6.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cauca.ApiClient.Tests" />
   </ItemGroup>
 
 </Project>

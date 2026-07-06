@@ -106,7 +106,7 @@ public abstract class FluentBaseService<TConfiguration> : IFluentRequestExecutor
         }
     }
 
-    protected virtual HttpRequestMessage GenerateRequest(HttpMethod method, FluentRequestDefinition request, HttpContent content = null)
+    private protected virtual HttpRequestMessage GenerateRequest(HttpMethod method, FluentRequestDefinition request, HttpContent content = null)
     {
         var httpRequestMessage = new HttpRequestMessage(method, RequestUriBuilder.BuildApiUri(Configuration, ApiPrefix, request.BuildRoute(), request.QueryParameters));
         foreach (var header in request.Headers)

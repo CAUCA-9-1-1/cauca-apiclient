@@ -18,7 +18,7 @@ internal class RefreshTokenHandlerRetryTests
     [SetUp]
     public void SetupTest()
     {
-        twoRetryPolicy = new InstantRetryBuilder().BuildRetryPolicy(2);
+        twoRetryPolicy = new LegacyInstantRetryBuilder().BuildRetryPolicy(2);
         accessInformation = new AccessInformation
         {
             AccessToken = "accesstoken",

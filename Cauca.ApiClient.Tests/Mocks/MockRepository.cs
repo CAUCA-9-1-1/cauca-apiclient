@@ -80,5 +80,10 @@ namespace Cauca.ApiClient.Tests.Mocks
                 .WithBody(entity)
                 .DeleteAsync();
         }
+
+        public Task<string> GetStringAsync(string url)
+        {
+            return Request(url).GetStringAsync();
+        }
     }
 }

@@ -3,7 +3,7 @@ using System;
 
 namespace Cauca.ApiClient.Tests.Services
 {
-    public class InstantRetryBuilder : RetryPolicyBuilder
+    public class InstantRetryBuilder : FluentRetryPolicyBuilder
     {
         protected override TimeSpan CalculateNextAttemptDelay(int retryAttempt)
         {

@@ -21,7 +21,7 @@ public abstract class FluentBaseSecureService<TConfiguration> : FluentBaseServic
     {
     }
 
-    protected override HttpRequestMessage GenerateRequest(HttpMethod method, FluentRequestDefinition request, HttpContent content = null)
+    private protected override HttpRequestMessage GenerateRequest(HttpMethod method, FluentRequestDefinition request, HttpContent content = null)
     {
         var httpRequestMessage = base.GenerateRequest(method, request, content);
         httpRequestMessage.Headers.TryAddWithoutValidation("Authorization", GetAuthorizationHeaderValue());

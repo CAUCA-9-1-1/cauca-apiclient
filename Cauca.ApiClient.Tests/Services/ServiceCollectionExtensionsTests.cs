@@ -1,3 +1,4 @@
+using System;
 using Cauca.ApiClient.Extensions;
 using Cauca.ApiClient.Tests.Mocks;
 using FluentAssertions;

@@ -19,7 +19,7 @@ public class RefreshTokenHandlerTests
     [SetUp]
     public void SetupTest()
     {
-        noRetryPolicy = new InstantRetryBuilder().BuildRetryPolicy(0);
+        noRetryPolicy = new LegacyInstantRetryBuilder().BuildRetryPolicy(0);
         accessInformation = new AccessInformation
         {
             AccessToken = "accesstoken",

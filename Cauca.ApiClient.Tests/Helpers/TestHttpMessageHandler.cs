@@ -119,7 +119,7 @@ public sealed class RecordedRequest
         }
 
         var headers = request.Headers
-            .Concat(request.Content?.Headers ?? [])
+            .Concat(request.Content?.Headers ?? Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>())
             .GroupBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.SelectMany(value => value.Value).ToArray(), StringComparer.OrdinalIgnoreCase);
 

@@ -22,7 +22,7 @@ internal sealed class FluentRefreshTokenHandler(
         PropertyNameCaseInsensitive = true
     };
 
-    protected IConfiguration Configuration { get; set; } = configuration;
+    private IConfiguration Configuration { get; set; } = configuration;
 
     public async Task RefreshToken(CancellationToken cancellationToken = default)
     {
