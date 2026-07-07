@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
+using Cauca.ApiClient.Extensions;
 using Polly;
 
 namespace Cauca.ApiClient.Services;
@@ -31,7 +32,53 @@ internal sealed class CaucaExternalSystemAuthHandler : DelegatingHandler
             await request.Content.LoadIntoBufferAsync();
 
         SetAuthorizationHeader(request);
-        return await base.SendAsync(request, cancellationToken);
+        var response = await base.SendAsync(request, cancellationToken);
+        if (!response.IsUnauthorized())
+            return response;
+
+        if (response.AccessTokenIsExpired())
+        {
+            response.Dispose();
+            await CreateRefreshTokenHandler().RefreshToken(cancellationToken);
+            return await ResendAsync(request, cancellationToken);
+        }
+
+        if (response.RefreshTokenIsExpired() || response.RefreshTokenIsInvalid())
+        {
+            response.Dispose();
+            await CreateRefreshTokenHandler().Login(cancellationToken);
+            return await ResendAsync(request, cancellationToken);
+        }
+
+        return response;
+    }
+
+    private async Task<HttpResponseMessage> ResendAsync(HttpRequestMessage originalRequest, CancellationToken cancellationToken)
+    {
+        using var retry = await CloneAsync(originalRequest);
+        SetAuthorizationHeader(retry);
+        return await base.SendAsync(retry, cancellationToken);
+    }
+
+    private static async Task<HttpRequestMessage> CloneAsync(HttpRequestMessage request)
+    {
+        var clone = new HttpRequestMessage(request.Method, request.RequestUri)
+        {
+            Version = request.Version
+        };
+
+        if (request.Content is not null)
+        {
+            var buffer = await request.Content.ReadAsByteArrayAsync();
+            clone.Content = new ByteArrayContent(buffer);
+            foreach (var header in request.Content.Headers)
+                clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        foreach (var header in request.Headers)
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+
+        return clone;
     }
 
     private async Task EnsureLoggedInAsync(CancellationToken cancellationToken)
