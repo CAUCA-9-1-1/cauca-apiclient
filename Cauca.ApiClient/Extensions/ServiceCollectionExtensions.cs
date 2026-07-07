@@ -3,6 +3,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading;
+using Cauca.ApiClient.Configuration;
+using Cauca.ApiClient.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cauca.ApiClient.Extensions;
@@ -62,5 +64,20 @@ public static class ServiceCollectionExtensions
     private static Func<HttpClient> CreateClientFactory(IServiceProvider serviceProvider, string clientName)
     {
         return () => serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(clientName);
+    }
+
+    public static IHttpClientBuilder AddCaucaExternalSystemAuth(
+        this IHttpClientBuilder builder,
+        IConfiguration configuration,
+        string apiPrefix = null)
+    {
+        var authClientName = $"CaucaExternalSystemAuth:{builder.Name}";
+        builder.Services.AddHttpClient(authClientName, static client => client.Timeout = Timeout.InfiniteTimeSpan);
+
+        return builder.AddHttpMessageHandler(serviceProvider => new CaucaExternalSystemAuthHandler(
+            configuration,
+            apiPrefix,
+            () => serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(authClientName),
+            new FluentRetryPolicyBuilder().BuildRetryPolicy(3)));
     }
 }
