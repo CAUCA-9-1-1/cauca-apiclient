@@ -95,4 +95,38 @@ public class CaucaExternalSystemAuthHandlerTests
         transport.Requests[2].RequestUri.Should().Be("http://test/Authentication/logonforexternalsystem");
         transport.Requests[3].HasHeader("Authorization", "Bearer SecondToken").Should().BeTrue();
     }
+
+    [Test]
+    public async Task WhenRetryAlsoReturns401_ReturnsItWithoutFurtherRetry()
+    {
+        var transport = new TestHttpMessageHandler();
+        transport.EnqueueJsonResponse(new LoginResult { AuthorizationType = "Bearer", AccessToken = "AccessToken", RefreshToken = "RefreshToken" });
+        transport.EnqueueJsonResponse(new MockResponse(), HttpStatusCode.Unauthorized, (RestResponseExtensions.AccessTokenExpired, "True"));
+        transport.EnqueueJsonResponse(new TokenRefreshResult { AccessToken = "RefreshedToken" });
+        transport.EnqueueJsonResponse(new MockResponse(), HttpStatusCode.Unauthorized, (RestResponseExtensions.AccessTokenExpired, "True"));
+        var client = CreateClient(transport);
+
+        var response = await client.GetAsync("mock");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        transport.Requests.Should().HaveCount(4);
+        transport.Requests[3].RequestUri.Should().Be("http://test/mock");
+    }
+
+    [Test]
+    public async Task WhenRefreshTokenInvalid_LogsBackInThenRetries()
+    {
+        var transport = new TestHttpMessageHandler();
+        transport.EnqueueJsonResponse(new LoginResult { AuthorizationType = "Bearer", AccessToken = "AccessToken", RefreshToken = "RefreshToken" });
+        transport.EnqueueJsonResponse(new MockResponse(), HttpStatusCode.Unauthorized, (RestResponseExtensions.RefreshTokenInvalid, "True"));
+        transport.EnqueueJsonResponse(new LoginResult { AuthorizationType = "Bearer", AccessToken = "SecondToken", RefreshToken = "SecondRefresh" });
+        transport.EnqueueJsonResponse(new MockResponse());
+        var client = CreateClient(transport);
+
+        await client.GetAsync("mock");
+
+        transport.Requests.Should().HaveCount(4);
+        transport.Requests[2].RequestUri.Should().Be("http://test/Authentication/logonforexternalsystem");
+        transport.Requests[3].HasHeader("Authorization", "Bearer SecondToken").Should().BeTrue();
+    }
 }

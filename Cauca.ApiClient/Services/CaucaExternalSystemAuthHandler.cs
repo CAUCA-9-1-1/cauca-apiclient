@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
-using Cauca.ApiClient.Extensions;
 using Polly;
 
 namespace Cauca.ApiClient.Services;
@@ -29,8 +28,9 @@ internal sealed class CaucaExternalSystemAuthHandler : DelegatingHandler
     {
         await EnsureLoggedInAsync(cancellationToken);
         if (request.Content is not null)
-            await request.Content.LoadIntoBufferAsync();
+            await request.Content.LoadIntoBufferAsync(cancellationToken);
 
+        var tokenUsed = _accessInformation.AccessToken;
         SetAuthorizationHeader(request);
         var response = await base.SendAsync(request, cancellationToken);
         if (!response.IsUnauthorized())
@@ -39,28 +39,47 @@ internal sealed class CaucaExternalSystemAuthHandler : DelegatingHandler
         if (response.AccessTokenIsExpired())
         {
             response.Dispose();
-            await CreateRefreshTokenHandler().RefreshToken(cancellationToken);
+            await ReauthenticateAsync(tokenUsed, reloginRequired: false, cancellationToken);
             return await ResendAsync(request, cancellationToken);
         }
 
         if (response.RefreshTokenIsExpired() || response.RefreshTokenIsInvalid())
         {
             response.Dispose();
-            await CreateRefreshTokenHandler().Login(cancellationToken);
+            await ReauthenticateAsync(tokenUsed, reloginRequired: true, cancellationToken);
             return await ResendAsync(request, cancellationToken);
         }
 
         return response;
     }
 
+    private async Task ReauthenticateAsync(string tokenUsed, bool reloginRequired, CancellationToken cancellationToken)
+    {
+        await _loginGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!string.Equals(_accessInformation.AccessToken, tokenUsed, StringComparison.Ordinal))
+                return;
+
+            if (reloginRequired)
+                await CreateRefreshTokenHandler().Login(cancellationToken);
+            else
+                await CreateRefreshTokenHandler().RefreshToken(cancellationToken);
+        }
+        finally
+        {
+            _loginGate.Release();
+        }
+    }
+
     private async Task<HttpResponseMessage> ResendAsync(HttpRequestMessage originalRequest, CancellationToken cancellationToken)
     {
-        using var retry = await CloneAsync(originalRequest);
+        using var retry = await CloneAsync(originalRequest, cancellationToken);
         SetAuthorizationHeader(retry);
         return await base.SendAsync(retry, cancellationToken);
     }
 
-    private static async Task<HttpRequestMessage> CloneAsync(HttpRequestMessage request)
+    private static async Task<HttpRequestMessage> CloneAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var clone = new HttpRequestMessage(request.Method, request.RequestUri)
         {
@@ -69,7 +88,7 @@ internal sealed class CaucaExternalSystemAuthHandler : DelegatingHandler
 
         if (request.Content is not null)
         {
-            var buffer = await request.Content.ReadAsByteArrayAsync();
+            var buffer = await request.Content.ReadAsByteArrayAsync(cancellationToken);
             clone.Content = new ByteArrayContent(buffer);
             foreach (var header in request.Content.Headers)
                 clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);

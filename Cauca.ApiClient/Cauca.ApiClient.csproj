@@ -8,7 +8,7 @@
     <Copyright>2026</Copyright>
     <PackageProjectUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</RepositoryUrl>
-    <Version>4.1.0-beta3</Version>
+    <Version>4.1.0</Version>
     <AssemblyVersion>4.1.0.0</AssemblyVersion>
     <FileVersion>4.1.0.0</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
