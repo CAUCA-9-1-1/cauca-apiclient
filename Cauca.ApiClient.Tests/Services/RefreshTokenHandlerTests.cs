@@ -1,103 +1,105 @@
 ﻿using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Services;
+using Cauca.ApiClient.Tests.Helpers;
 using Cauca.ApiClient.Tests.Mocks;
 using FluentAssertions;
-using Flurl.Http.Testing;
 using NUnit.Framework;
 using Polly;
 
-namespace Cauca.ApiClient.Tests.Services
+namespace Cauca.ApiClient.Tests.Services;
+
+[TestFixture]
+public class RefreshTokenHandlerTests
 {
-    [TestFixture]
-    public class RefreshTokenHandlerTests
+    private IConfiguration configuration;
+    private IAsyncPolicy noRetryPolicy;
+    private AccessInformation accessInformation;
+
+    [SetUp]
+    public void SetupTest()
     {
-        private IConfiguration configuration;
-        private IAsyncPolicy noRetryPolicy;
-        private RefreshTokenHandler tokenHandler;
-        private AccessInformation accessInformation;
-
-        [SetUp]
-        public void SetupTest()
+        noRetryPolicy = new LegacyInstantRetryBuilder().BuildRetryPolicy(0);
+        accessInformation = new AccessInformation
         {
-            noRetryPolicy = new InstantRetryBuilder().BuildRetryPolicy(0);
-            accessInformation = new AccessInformation
-            {
-                AccessToken = "accesstoken",
-                RefreshToken = "refreshtoken",
-                AuthorizationType = "bearer"
-            };
+            AccessToken = "accesstoken",
+            RefreshToken = "refreshtoken",
+            AuthorizationType = "bearer"
+        };
 
-            configuration = new MockConfiguration
-            {
-                ApiBaseUrl = "http://test",
-
-                UseExternalSystemLogin = false
-            };
-
-            tokenHandler = new RefreshTokenHandler(configuration, accessInformation, noRetryPolicy);
-        }
-
-        [TestCase(true, "http://test/Authentication/refreshforexternalsystem")]
-        [TestCase(false, "http://test/Authentication/refresh")]
-        public async Task UrlIsCorrectlyGeneratedForExternalSystemAndNormalUserRefresh(bool useExternalSystem, string urlThatShouldHaveBeenCalled)
+        configuration = new MockConfiguration
         {
-            using var httpTest = new HttpTest();
-            httpTest.RespondWithJson(new TokenRefreshResult());
-            configuration.UseExternalSystemLogin = useExternalSystem;
-            
-            await tokenHandler.RefreshToken();
+            ApiBaseUrl = "http://test",
+            UseExternalSystemLogin = false,
+            UserId = "user",
+            Password = "password"
+        };
+    }
 
-            httpTest.ShouldHaveCalled(urlThatShouldHaveBeenCalled);
-        }
+    [TestCase(true, "http://test/Authentication/refreshforexternalsystem")]
+    [TestCase(false, "http://test/Authentication/refresh")]
+    public async Task UrlIsCorrectlyGeneratedForExternalSystemAndNormalUserRefresh(bool useExternalSystem, string expectedUrl)
+    {
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueJsonResponse(new TokenRefreshResult());
+        configuration.UseExternalSystemLogin = useExternalSystem;
+        var tokenHandler = new RefreshTokenHandler(configuration, accessInformation, noRetryPolicy, handler.CreateClientFactory());
 
-        [Test]
-        public async Task AuthenticationUrlIsSet_WhenLoggingIn_ShouldUseBaseUrl()
-        {
-            var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = null;
-            using var httpTest = new HttpTest();
-            httpTest.RespondWithJson(loginResult);
+        await tokenHandler.RefreshToken();
 
-            await tokenHandler.Login();
+        handler.Requests.Should().ContainSingle().Which.RequestUri.Should().Be(expectedUrl);
+    }
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrl}/Authentication/logon");
-        }
+    [Test]
+    public async Task AuthenticationUrlIsSet_WhenLoggingIn_ShouldUseBaseUrl()
+    {
+        var handler = new TestHttpMessageHandler();
+        var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
+        configuration.ApiBaseUrlForAuthentication = null;
+        handler.EnqueueJsonResponse(loginResult);
+        var tokenHandler = new RefreshTokenHandler(configuration, accessInformation, noRetryPolicy, handler.CreateClientFactory());
 
-        [Test]
-        public async Task AuthenticationUrlIsSet_WhenLoggingIn_ShouldUseBaseAuthenticationUrl()
-        {
-            var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
-            configuration.ApiBaseUrlForAuthentication = "http://test/secureApi";
-            using var httpTest = new HttpTest();
-            httpTest.RespondWithJson(loginResult);
+        await tokenHandler.Login();
 
-            await tokenHandler.Login();
+        handler.Requests.Should().ContainSingle().Which.RequestUri.Should().Be($"{configuration.ApiBaseUrl}/Authentication/logon");
+    }
 
-            httpTest.ShouldHaveCalled($"{configuration.ApiBaseUrlForAuthentication}/Authentication/logon");
-        }
+    [Test]
+    public async Task AuthenticationUrlIsSet_WhenLoggingIn_ShouldUseBaseAuthenticationUrl()
+    {
+        var handler = new TestHttpMessageHandler();
+        var loginResult = new LoginResult { AuthorizationType = "Bearer", RefreshToken = "NewRefreshToken", AccessToken = "NewAccessToken" };
+        configuration.ApiBaseUrlForAuthentication = "http://test/secureApi";
+        handler.EnqueueJsonResponse(loginResult);
+        var tokenHandler = new RefreshTokenHandler(configuration, accessInformation, noRetryPolicy, handler.CreateClientFactory());
 
-        [Test]
-        public async Task NewAccessTokenIsCorrectlyCopiedInTheCurrentConfiguration()
-        {
-            var newToken = "newtoken";
-            using var httpTest = new HttpTest();
-            httpTest.RespondWithJson(new TokenRefreshResult { AccessToken = newToken });
+        await tokenHandler.Login();
 
-            await tokenHandler.RefreshToken();
+        handler.Requests.Should().ContainSingle().Which.RequestUri.Should().Be($"{configuration.ApiBaseUrlForAuthentication}/Authentication/logon");
+    }
 
-            newToken.Should().Be(accessInformation.AccessToken);
-        }
+    [Test]
+    public async Task NewAccessTokenIsCorrectlyCopiedInTheCurrentConfiguration()
+    {
+        var handler = new TestHttpMessageHandler();
+        const string newToken = "newtoken";
+        handler.EnqueueJsonResponse(new TokenRefreshResult { AccessToken = newToken });
+        var tokenHandler = new RefreshTokenHandler(configuration, accessInformation, noRetryPolicy, handler.CreateClientFactory());
 
-        [Test]
-        public async Task NullIsCorrectlyReturnedForAnyOtherReason()
-        {
-            using var httpTest = new HttpTest();
-            httpTest.RespondWithJson(new TokenRefreshResult(), 404);
-            
-            await tokenHandler.RefreshToken();
+        await tokenHandler.RefreshToken();
 
-            accessInformation.AccessToken.Should().BeNull();
-        }
+        accessInformation.AccessToken.Should().Be(newToken);
+    }
+
+    [Test]
+    public async Task NullIsCorrectlyReturnedForAnyOtherReason()
+    {
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueJsonResponse(new TokenRefreshResult(), System.Net.HttpStatusCode.NotFound);
+        var tokenHandler = new RefreshTokenHandler(configuration, accessInformation, noRetryPolicy, handler.CreateClientFactory());
+
+        await tokenHandler.RefreshToken();
+
+        accessInformation.AccessToken.Should().BeNull();
     }
 }

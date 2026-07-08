@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -9,6 +9,7 @@ using Flurl.Http;
 
 namespace Cauca.ApiClient.Services
 {
+    [Obsolete("BaseSecureService<TConfiguration> is deprecated. Use FluentBaseSecureService<TConfiguration> for new development.")]
     public abstract class BaseSecureService<TConfiguration> 
         : BaseService<TConfiguration> 
         where TConfiguration : IConfiguration

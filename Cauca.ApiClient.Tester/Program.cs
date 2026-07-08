@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
 using Cauca.ApiClient.Services;
-using Flurl.Http.Testing;
 
 namespace Cause.SecurityManagement.ApiClient.Tester
 {
@@ -12,8 +10,6 @@ namespace Cause.SecurityManagement.ApiClient.Tester
     {
         static async Task Main(string[] args)
         {
-            //Console.WriteLine("Hello World!");
-
             var config = new Configuration();
             var service = new WhateverService(config);
             var message = new CommProviderAlertDetail
@@ -26,20 +22,18 @@ namespace Cause.SecurityManagement.ApiClient.Tester
                 }
             };
 
-            using var httpTest = new HttpTest();
-            httpTest.RespondWith("farlouche");
+            Console.WriteLine("Tester is ready. Configure a reachable API endpoint before running live requests.");
+            Console.WriteLine($"Sample payload recipient count: {message.RecipientInformations.Count}");
 
-            var response = await service.GetWhateve();
-
-            /*httpTest.ShouldHaveCalled("http://test/yo")
-                .WithVerb(HttpMethod.Get)
-                .Times(1);*/
-
-            
-
-            //await service.SendMessage(new List<CommProviderAlertDetail>{message});
-
-            Console.WriteLine("Funky whop");
+            try
+            {
+                var response = await service.GetWhateve();
+                Console.WriteLine($"Response: {response}");
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine($"Live request failed: {exception.Message}");
+            }
         }
     }
 
