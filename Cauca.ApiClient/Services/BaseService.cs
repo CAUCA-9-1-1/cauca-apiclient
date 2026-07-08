@@ -13,7 +13,7 @@ using Polly;
 
 namespace Cauca.ApiClient.Services
 {
-    [Obsolete("BaseService<TConfiguration> is deprecated. Use FluentBaseService<TConfiguration> for new development.")]
+    [Obsolete("BaseService<TConfiguration> is deprecated. Use FluentBaseService<TConfiguration> for new development. See https://github.com/CAUCA-9-1-1/cauca-apiclient/blob/main/docs/UPGRADING.md to migrate.")]
     public abstract class BaseService<TConfiguration> : IBaseService
         where TConfiguration : IConfiguration
     {

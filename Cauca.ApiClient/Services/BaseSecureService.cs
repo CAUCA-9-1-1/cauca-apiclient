@@ -9,7 +9,7 @@ using Flurl.Http;
 
 namespace Cauca.ApiClient.Services
 {
-    [Obsolete("BaseSecureService<TConfiguration> is deprecated. Use FluentBaseSecureService<TConfiguration> for new development.")]
+    [Obsolete("BaseSecureService<TConfiguration> is deprecated. Use FluentBaseSecureService<TConfiguration> for new development. See https://github.com/CAUCA-9-1-1/cauca-apiclient/blob/main/docs/UPGRADING.md to migrate.")]
     public abstract class BaseSecureService<TConfiguration> 
         : BaseService<TConfiguration> 
         where TConfiguration : IConfiguration
