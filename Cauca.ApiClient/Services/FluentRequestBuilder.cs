@@ -110,6 +110,11 @@ public sealed class FluentRequestBuilder
         return _executor.SendAsync<TResult>(_request, HttpMethod.Put, cancellationToken);
     }
 
+    public Task<TResult> PatchAsync<TResult>(CancellationToken cancellationToken = default)
+    {
+        return _executor.SendAsync<TResult>(_request, HttpMethod.Patch, cancellationToken);
+    }
+
     public Task<TResult> DeleteAsync<TResult>(CancellationToken cancellationToken = default)
     {
         return _executor.SendAsync<TResult>(_request, HttpMethod.Delete, cancellationToken);
