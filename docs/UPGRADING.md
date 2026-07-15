@@ -142,14 +142,73 @@ Existing authentication configuration still applies.
 
 ## DI migration
 
-For migrated clients:
+For migrated clients, the library ships two low-level helpers:
 
 ```csharp
 services.AddClient<MyClient>();
 services.AddSecureClient<MySecureClient>();
 ```
 
-These helpers support both fluent and legacy constructor shapes, so you can migrate incrementally.
+Both register a named `HttpClient` through `IHttpClientFactory` and resolve the client through `ActivatorUtilities`, injecting a `Func<HttpClient>` factory when the constructor asks for one. They support both fluent and legacy constructor shapes, so you can migrate incrementally.
+
+Because `ActivatorUtilities` resolves the client's `TConfiguration` constructor argument from the container, the configuration must be registered as its **concrete type**:
+
+```csharp
+services.AddSingleton(new MyConfiguration { ApiBaseUrl = "https://api.example.ca" });
+services.AddClient<MyClient>();
+```
+
+> `services.Configure<MyConfiguration>(...)` on its own is **not** enough: it registers `IOptions<MyConfiguration>`, not the bare `MyConfiguration` that the fluent constructor takes, so the client fails to resolve. Register the concrete type — either directly as shown above, or by materializing it inside your own registration extension (below).
+
+### Recommended: ship a per-client registration extension
+
+Rather than make every consumer call `AddClient` and wire up the interface and configuration by hand, give each client library its own `Add<Name>Client` extension. It encapsulates the `IHttpClientFactory` registration, maps the client interface to the same instance, and offers a configuration overload:
+
+```csharp
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddSurviCartoClient(
+        this IServiceCollection services,
+        ServiceLifetime lifetime = ServiceLifetime.Transient)
+    {
+        services.AddClient<SurviCartoClient>(lifetime);
+        services.Add(new ServiceDescriptor(
+            typeof(ISurviCartoClient),
+            provider => provider.GetRequiredService<SurviCartoClient>(),
+            lifetime));
+
+        return services;
+    }
+
+    public static IServiceCollection AddSurviCartoClient(
+        this IServiceCollection services,
+        Action<SurviCartoClientConfiguration> configureSettings,
+        ServiceLifetime lifetime = ServiceLifetime.Transient)
+    {
+        var configuration = new SurviCartoClientConfiguration();
+        configureSettings(configuration);
+        services.AddSingleton(configuration);
+
+        return services.AddSurviCartoClient(lifetime);
+    }
+}
+```
+
+Consumers then register the client in one line:
+
+```csharp
+services.AddSurviCartoClient(settings =>
+{
+    settings.ApiBaseUrl = "https://survicarto.example.ca";
+});
+```
+
+Notes:
+
+- The configuration overload materializes and registers the concrete `SurviCartoClientConfiguration` (not `IOptions<...>`), which is what the client constructor resolves. If you prefer `Configure<T>` / `IOptions<T>`, add a bridging registration — `services.AddSingleton(sp => sp.GetRequiredService<IOptions<SurviCartoClientConfiguration>>().Value)` — so the bare type is still resolvable.
+- The interface descriptor forwards to the concrete registration, so `ISurviCartoClient` and `SurviCartoClient` resolve the **same** instance and share the registered lifetime.
+- Respect the lifetime rules of the underlying client: a secure client registered through `AddSecureClient` cannot be a singleton, because it keeps per-instance access-token state.
+- Keep the extension in the client library itself, so the concrete client type and its configuration can remain `internal` to that assembly if you want to expose only the interface.
 
 ## Recommended migration order
 

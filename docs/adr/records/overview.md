@@ -22,6 +22,7 @@ This index tracks Architecture Decision Records (ADRs) stored in this folder.
 | Polly Transient-Failure Retry Policy | accepted | [2026-07-07-polly-transient-failure-retry-policy.md](2026-07-07-polly-transient-failure-retry-policy.md) |
 | Centralized Status-Code To Typed-Exception Translation | accepted | [2026-07-07-centralized-status-code-exception-translation.md](2026-07-07-centralized-status-code-exception-translation.md) |
 | Single-Package Release Governance For Cauca.ApiClient | accepted | [2026-07-07-single-package-release-governance.md](2026-07-07-single-package-release-governance.md) |
+| Backward Compatibility Is The Default For The Public API And Target Frameworks | accepted | [2026-07-14-public-api-compatibility-policy.md](2026-07-14-public-api-compatibility-policy.md) |
 
 ## Review Protocol
 

@@ -23,12 +23,31 @@ Apply the version bump that matches the highest-impact change in the release.
 
 | Change type | Version component | Examples |
 |---|---|---|
-| Breaking change in any public API or behavior contract | **MAJOR** | Remove or rename a public method, change a `FluentBaseService` / `FluentBaseSecureService` signature, change a DI extension's contract, alter authentication behavior |
-| Additive change (backwards compatible) | **MINOR** | New request-builder method, new overload, new optional parameter, new DI extension |
+| Breaking change in any public API, framework support, or behavior contract | **MAJOR** | Remove or rename a public method, change a `FluentBaseService` / `FluentBaseSecureService` signature, **add a parameter (even an optional one) to an existing member**, add a member to a public interface, **drop a target framework**, change a DI extension's contract, alter authentication behavior |
+| Additive change (backwards compatible) | **MINOR** | New request-builder method, **new overload**, new DI extension, **new target framework added alongside the existing ones**, mark a member `[Obsolete]` |
 | Bug fix, documentation, internal refactor | **PATCH** | Fix incorrect request composition, correct a return type, update XML docs |
+
+> **Adding an optional parameter to an existing member is a MAJOR change, not a MINOR
+> one.** Every existing call site still compiles, which makes it look additive, but the
+> member's signature changes — consumers compiled against the previous version fail at
+> runtime with `MissingMethodException`. Add an **overload** instead and the change is
+> MINOR. See
+> [Backward Compatibility Is The Default](adr/records/2026-07-14-public-api-compatibility-policy.md),
+> which also defines what is required to break compatibility deliberately.
 
 Update `<Version>`, `<AssemblyVersion>`, and `<FileVersion>` in
 `Cauca.ApiClient.csproj` to the same new value before releasing.
+
+## Compatibility Gate
+
+The project sets `EnablePackageValidation` with a `PackageValidationBaselineVersion`, so
+`dotnet pack` compares the surface being packed against the last published package and
+fails the release on a binary-breaking change.
+
+After each successful release, **advance `PackageValidationBaselineVersion` to the
+version just published**. If a release intentionally breaks compatibility (MAJOR, with
+the ADR and `UPGRADING.md` entry the policy requires), reset the baseline to that new
+version — otherwise the gate keeps failing on a break that was already approved.
 
 ## Release Notes
 
