@@ -8,13 +8,13 @@
     <Copyright>2026</Copyright>
     <PackageProjectUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</RepositoryUrl>
-    <Version>4.1.1</Version>
-    <AssemblyVersion>4.1.1.0</AssemblyVersion>
-    <FileVersion>4.1.1.0</FileVersion>
-    <PackageReleaseNotes>Fluent API. ExternalSystem self-auth handler for generated clients.</PackageReleaseNotes>
+    <Version>4.1.2</Version>
+    <AssemblyVersion>4.1.2.0</AssemblyVersion>
+    <FileVersion>4.1.2.0</FileVersion>
+    <PackageReleaseNotes>4.1.2 — Security fix (#8): login exceptions no longer expose credentials. With external-system login, InvalidCredentialException now uses a fixed message instead of embedding the API key (user/password login still includes the username). The legacy RefreshTokenHandler no longer attaches the Flurl request (which carried the API key or password) to login exceptions: InnerException is now an internal HTTP exception holding only the URL, status code and response body, and InternalErrorApiException.Body is null — matching the fluent handler. No public API change; backwards compatible with 4.1.x consumers.</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>4.1.0</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>4.1.1</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>

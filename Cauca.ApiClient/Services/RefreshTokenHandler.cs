@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -80,13 +81,46 @@ namespace Cauca.ApiClient.Services
             }
             catch (FlurlHttpException exception)
             {
-                if (exception.Call.IsUnauthorized())
-                    throw new InvalidCredentialException(Configuration.UserId, exception);
+                var apiException = await ToApiHttpExceptionAsync(exception);
 
-                if (exception.Call.NoResponse())
-                    throw new NoResponseApiException(exception);
+                if (apiException.IsUnauthorized())
+                    throw CreateInvalidCredentialException(apiException);
 
-                throw new InternalErrorApiException("An error occured in the login process", exception);
+                if (apiException.NoResponse())
+                    throw new NoResponseApiException(apiException);
+
+                throw new InternalErrorApiException("An error occured in the login process", apiException);
+            }
+        }
+
+        private InvalidCredentialException CreateInvalidCredentialException(Exception exception)
+        {
+            return Configuration.UseExternalSystemLogin
+                ? new InvalidCredentialException(exception)
+                : new InvalidCredentialException(Configuration.UserId, exception);
+        }
+
+        private static async Task<ApiHttpException> ToApiHttpExceptionAsync(FlurlHttpException exception)
+        {
+            var requestUri = exception.Call?.Request?.Url?.ToString();
+            var statusCode = (HttpStatusCode?)exception.Call?.Response?.StatusCode;
+            var answerReceived = exception.Call?.Response is not null;
+
+            return new ApiHttpException(requestUri, statusCode, answerReceived, await GetResponseBodyAsync(exception, answerReceived));
+        }
+
+        private static async Task<string> GetResponseBodyAsync(FlurlHttpException exception, bool answerReceived)
+        {
+            if (!answerReceived)
+                return null;
+
+            try
+            {
+                return await exception.GetResponseStringAsync();
+            }
+            catch
+            {
+                return null;
             }
         }
 

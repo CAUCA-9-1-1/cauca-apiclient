@@ -50,13 +50,20 @@ internal sealed class FluentRefreshTokenHandler(
         catch (ApiHttpException exception)
         {
             if (exception.IsUnauthorized())
-                throw new InvalidCredentialException(Configuration.UserId, exception);
+                throw CreateInvalidCredentialException(exception);
 
             if (exception.NoResponse())
                 throw new NoResponseApiException(exception);
 
             throw new InternalErrorApiException("An error occured in the login process", exception);
         }
+    }
+
+    private InvalidCredentialException CreateInvalidCredentialException(Exception exception)
+    {
+        return Configuration.UseExternalSystemLogin
+            ? new InvalidCredentialException(exception)
+            : new InvalidCredentialException(Configuration.UserId, exception);
     }
 
     private async Task<string> GetNewAccessToken(CancellationToken cancellationToken)

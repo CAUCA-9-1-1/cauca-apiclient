@@ -40,6 +40,18 @@ namespace Cauca.ApiClient.Tests.Exceptions
         }
 
         [TestCase]
+        public void InvalidCredentialExceptionWithUserNameMessageIsCorrectlyGenerated()
+        {
+            new InvalidCredentialException("theUser", new System.Exception()).Message.Should().Be("Credential are invalid for username 'theUser'.");
+        }
+
+        [TestCase]
+        public void InvalidCredentialExceptionForExternalSystemMessageIsCorrectlyGenerated()
+        {
+            new InvalidCredentialException(new System.Exception()).Message.Should().Be("The configured external system credentials were rejected.");
+        }
+
+        [TestCase]
         public void NoResponseApiExceptionMessageIsCorrectlyGenerated()
         {
             new NoResponseApiException().Message.Should().Be("API didn't return an answer in a timely manner.");
