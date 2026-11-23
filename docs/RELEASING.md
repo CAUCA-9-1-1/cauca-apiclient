@@ -17,7 +17,8 @@ driven only by the script — the project intentionally does **not** set
 > **Prerequisites:** `CaucaNuget` must be a configured NuGet source on the
 > release machine. The script does not configure feeds. The package targets
 > `net10.0` and `net11.0`, so the release machine needs the .NET 11 SDK, which
-> builds both.
+> builds both, and the .NET 10 runtime: the test step runs the `net10.0` tests
+> and the .NET 11 SDK does not ship that runtime.
 
 ## Semver Bump Rules
 
