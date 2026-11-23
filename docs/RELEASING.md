@@ -14,8 +14,10 @@ packs, and pushes the package to the internal `CaucaNuget` feed. Packing is
 driven only by the script — the project intentionally does **not** set
 `GeneratePackageOnBuild`, so a plain build never produces a package.
 
-> **Prerequisite:** `CaucaNuget` must be a configured NuGet source on the
-> release machine. The script does not configure feeds.
+> **Prerequisites:** `CaucaNuget` must be a configured NuGet source on the
+> release machine. The script does not configure feeds. The package targets
+> `net10.0` and `net11.0`, so the release machine needs the .NET 11 SDK, which
+> builds both.
 
 ## Semver Bump Rules
 
