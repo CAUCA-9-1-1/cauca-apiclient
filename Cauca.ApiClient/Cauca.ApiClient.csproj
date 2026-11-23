@@ -8,13 +8,13 @@
     <Copyright>2026</Copyright>
     <PackageProjectUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CAUCA-9-1-1/cauca-apiclient</RepositoryUrl>
-    <Version>4.1.2</Version>
-    <AssemblyVersion>4.1.2.0</AssemblyVersion>
-    <FileVersion>4.1.2.0</FileVersion>
-    <PackageReleaseNotes>4.1.2 — Security fix (#8): login exceptions no longer expose credentials. With external-system login, InvalidCredentialException now uses a fixed message instead of embedding the API key (user/password login still includes the username). The legacy RefreshTokenHandler no longer attaches the Flurl request (which carried the API key or password) to login exceptions: InnerException is now an internal HTTP exception holding only the URL, status code and response body, and InternalErrorApiException.Body is null — matching the fluent handler. No public API change; backwards compatible with 4.1.x consumers.</PackageReleaseNotes>
+    <Version>4.2.0</Version>
+    <AssemblyVersion>4.2.0.0</AssemblyVersion>
+    <FileVersion>4.2.0.0</FileVersion>
+    <PackageReleaseNotes>4.2.0 — Adds .NET 11 support: the package now targets both net10.0 and net11.0. Microsoft.Extensions.DependencyInjection.Abstractions and Microsoft.Extensions.Http follow the target framework (10.0.x on net10.0, 11.0.x on net11.0). Polly moves from 8.7.x to 8.9.x; a host that pins an older Polly directly must raise it. No public API change; backwards compatible with 4.1.x consumers.</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>4.1.1</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>4.1.2</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>
