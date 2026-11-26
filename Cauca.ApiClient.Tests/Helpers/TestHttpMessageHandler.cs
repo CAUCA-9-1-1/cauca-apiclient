@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -142,6 +143,7 @@ public sealed class RecordedRequest
             headers);
     }
 }
+
 internal sealed class StalledContent : HttpContent
 {
     private readonly TimeSpan _stallDuration;
@@ -151,21 +153,21 @@ internal sealed class StalledContent : HttpContent
         _stallDuration = stallDuration;
     }
 
-    protected override Task SerializeToStreamAsync(System.IO.Stream stream, System.Net.TransportContext context)
+    protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
     {
         return SerializeToStreamAsync(stream, context, CancellationToken.None);
     }
 
-    protected override async Task SerializeToStreamAsync(System.IO.Stream stream, System.Net.TransportContext context, CancellationToken cancellationToken)
+    protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context, CancellationToken cancellationToken)
     {
         await Task.Delay(_stallDuration, cancellationToken);
         await stream.WriteAsync(Encoding.UTF8.GetBytes("late"), cancellationToken);
     }
 
-    protected override async Task<System.IO.Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken)
+    protected override async Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken)
     {
         await Task.Delay(_stallDuration, cancellationToken);
-        return new System.IO.MemoryStream(Encoding.UTF8.GetBytes("late"));
+        return new MemoryStream(Encoding.UTF8.GetBytes("late"));
     }
 
     protected override bool TryComputeLength(out long length)

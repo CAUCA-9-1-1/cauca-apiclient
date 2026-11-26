@@ -51,19 +51,6 @@ public class FluentExceptionMappingTests
 
     [TestCase(HttpStatusCode.Conflict)]
     [TestCase(HttpStatusCode.UnprocessableEntity)]
-    public async Task Request_UnmappedStatusCodeWithAnswer_ThrowsApiClientException(HttpStatusCode statusCode)
-    {
-        var handler = new TestHttpMessageHandler();
-        handler.EnqueueJsonResponse(new MockResponse(), statusCode);
-        var repo = new MockRepository(configuration, handler.CreateClientFactory());
-
-        var action = () => repo.PostMockAsync(new MockEntity());
-
-        await action.Should().ThrowAsync<ApiClientException>();
-    }
-
-    [TestCase(HttpStatusCode.Conflict)]
-    [TestCase(HttpStatusCode.UnprocessableEntity)]
     public async Task Request_UnmappedStatusCodeWithAnswer_ExposesStatusCode(HttpStatusCode statusCode)
     {
         var handler = new TestHttpMessageHandler();

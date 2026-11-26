@@ -30,8 +30,17 @@ internal sealed class FluentRequestDefinition
             if (segment is null)
                 continue;
 
-            Segments.Add(Uri.EscapeDataString(Convert.ToString(segment, CultureInfo.InvariantCulture)));
+            Segments.Add(EscapeSegment(Convert.ToString(segment, CultureInfo.InvariantCulture)));
         }
+    }
+
+    private static string EscapeSegment(string value)
+    {
+        var trimmed = value.Trim('/');
+        if (trimmed is "." or "..")
+            throw new ArgumentException($"The path segment '{value}' is not allowed because it navigates the path.");
+
+        return Uri.EscapeDataString(trimmed);
     }
 
     public void MergeQueryParameters(object queryParameters)
@@ -70,13 +79,17 @@ internal sealed class FluentRequestDefinition
 
     public string BuildRoute()
     {
+        var route = Route ?? string.Empty;
+        var queryIndex = route.IndexOf('?');
+        var path = queryIndex < 0 ? route : route[..queryIndex];
+        var query = queryIndex < 0 ? string.Empty : route[queryIndex..];
+
         var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(Route))
-            parts.Add(Route.Trim('/'));
+        if (!string.IsNullOrWhiteSpace(path))
+            parts.Add(path.Trim('/'));
 
-        foreach (var segment in Segments)
-            parts.Add(segment.Trim('/'));
+        parts.AddRange(Segments);
 
-        return string.Join("/", parts);
+        return string.Join("/", parts) + query;
     }
 }

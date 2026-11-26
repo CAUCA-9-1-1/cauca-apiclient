@@ -136,6 +136,12 @@ The fluent request pipeline behaves differently from earlier fluent releases in 
 
 - Path segments are escaped with `Uri.EscapeDataString`. One value is exactly one segment: `/`, `?` and `#` inside a value are sent as `%2F`, `%3F` and `%23`. Callers that passed `"a/b"` to get two segments must call `AppendSegments("a", "b")`.
 - A query string written in the route (`Request("orders?status=open")`) is kept and merged with the builder parameters. A builder parameter replaces a route parameter of the same name (case-insensitive); a builder parameter set to `null` removes it.
+- Segment values must no longer be escaped by the caller: `%` is now sent as `%25`, so a pre-escaped value is escaped twice.
+- Leading and trailing `/` are trimmed from each segment before escaping, as the legacy services did (`AppendSegment("/details")` sends `/details`). A `/` inside a value is still sent as `%2F`.
+- `AppendSegment` throws `ArgumentException` for a segment equal to `.` or `..` (after trimming `/`), because `System.Uri` would otherwise navigate the path. Values such as `...` or `a..b` are accepted.
+- A segment appended to a route that already carries a query goes into the path: `Request("orders?status=open").AppendSegment(5)` sends `/orders/5?status=open`.
+- When the response body cannot be read after a status was received (stall, timeout, connection failure), the call throws `ResponseBodyNotReceivedApiException` (a `NoResponseApiException` exposing `StatusCode`) and is never retried, so a non-idempotent request such as a POST is not sent twice.
+- `RestResponseValidator.ThrowExceptionForStatusCode` (public), called with `answerReceived` true and a non-2xx unmapped code, now throws `UnexpectedStatusCodeApiException` instead of rethrowing the exception it received. The legacy services pass `Call.Succeeded`, so they keep reporting unmapped codes as `NoResponseApiException`.
 - A status code without a dedicated exception (for example 409 or 422) now throws `UnexpectedStatusCodeApiException`, which derives from `ApiClientException` and exposes `StatusCode`. It was an internal exception type that callers could not catch.
 - A request resent after an access-token refresh goes through the same status-code translation as the first attempt (a 404 now throws `NotFoundApiException`).
 - `RequestTimeoutInSeconds` covers the whole attempt, including reading the response body (and the login and refresh calls). A stalled body now throws `NoResponseApiException` instead of waiting indefinitely.

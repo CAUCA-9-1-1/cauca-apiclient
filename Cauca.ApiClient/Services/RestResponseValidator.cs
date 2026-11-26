@@ -25,6 +25,14 @@ public class RestResponseValidator
         throw exception;
     }
 
+    internal void ThrowExceptionForApiHttpException(ApiHttpException exception)
+    {
+        if (exception.IsResponseBodyNotReceived)
+            throw new ResponseBodyNotReceivedApiException(exception.RequestUri, exception.StatusCode!.Value, exception);
+
+        ThrowExceptionForStatusCode(exception.RequestUri, exception.AnswerReceived, exception.StatusCode, exception, exception.ResponseBody);
+    }
+
     private static bool IsSuccess(HttpStatusCode code)
     {
         return (int)code is >= 200 and <= 299;

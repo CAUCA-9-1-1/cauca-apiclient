@@ -86,8 +86,7 @@ public abstract class FluentBaseService<TConfiguration> : IFluentRequestExecutor
         }
         catch (ApiHttpException exception)
         {
-            new RestResponseValidator()
-                .ThrowExceptionForStatusCode(exception.RequestUri, exception.AnswerReceived, exception.StatusCode, exception, exception.ResponseBody);
+            new RestResponseValidator().ThrowExceptionForApiHttpException(exception);
             throw;
         }
     }
@@ -100,8 +99,7 @@ public abstract class FluentBaseService<TConfiguration> : IFluentRequestExecutor
         }
         catch (ApiHttpException exception)
         {
-            new RestResponseValidator()
-                .ThrowExceptionForStatusCode(exception.RequestUri, exception.AnswerReceived, exception.StatusCode, exception, exception.ResponseBody);
+            new RestResponseValidator().ThrowExceptionForApiHttpException(exception);
             throw;
         }
     }
@@ -121,7 +119,7 @@ public abstract class FluentBaseService<TConfiguration> : IFluentRequestExecutor
         await RetryPolicy.ExecuteAsync(async () =>
         {
             using var httpRequest = GenerateRequest(method, request, CreateContent(method, request));
-            await SendCoreAsync(httpRequest, cancellationToken, static (_, _) => Task.FromResult(true));
+            await SendCoreAsync(httpRequest, cancellationToken, IgnoreResponseAsync);
         });
     }
 
@@ -148,7 +146,7 @@ public abstract class FluentBaseService<TConfiguration> : IFluentRequestExecutor
             if (!response.IsSuccessStatusCode)
                 throw await ApiHttpException.CreateAsync(request, response, timeoutTokenSource.Token);
 
-            return await responseReader(response, timeoutTokenSource.Token);
+            return await ApiHttpException.ReadSuccessBodyAsync(request, response, responseReader, timeoutTokenSource.Token, cancellationToken);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -158,6 +156,11 @@ public abstract class FluentBaseService<TConfiguration> : IFluentRequestExecutor
         {
             throw ApiHttpException.NoResponse(request, exception);
         }
+    }
+
+    private static Task<bool> IgnoreResponseAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(true);
     }
 
     private HttpContent CreateContent(HttpMethod method, FluentRequestDefinition request)

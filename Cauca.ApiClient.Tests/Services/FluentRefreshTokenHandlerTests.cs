@@ -123,6 +123,7 @@ public class FluentRefreshTokenHandlerTests
         var action = () => tokenHandler.Login().WaitAsync(TimeSpan.FromSeconds(4));
 
         await action.Should().ThrowAsync<NoResponseApiException>();
+        handler.Requests.Should().ContainSingle();
     }
 
     [Test]

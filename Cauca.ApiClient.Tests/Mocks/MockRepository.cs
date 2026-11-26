@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Services;
 
@@ -96,9 +97,9 @@ namespace Cauca.ApiClient.Tests.Mocks
             return Request(route).AddQueryParameter(name, value).GetStringAsync();
         }
 
-        public Task<string> GetMockStringWithCancellationAsync(System.Threading.CancellationToken cancellationToken)
+        public Task<string> GetMockStringWithCancellationAsync(CancellationToken cancellationToken)
         {
             return Request("mock").GetStringAsync(cancellationToken);
         }
-}
+    }
 }

@@ -27,6 +27,8 @@ internal sealed class ApiHttpException : Exception
 
     public string ResponseBody { get; }
 
+    public bool IsResponseBodyNotReceived { get; init; }
+
     public IReadOnlyCollection<string> ResponseHeaders { get; init; } = Array.Empty<string>();
 
     public static async Task<ApiHttpException> CreateAsync(HttpRequestMessage request, HttpResponseMessage response, CancellationToken cancellationToken, Exception innerException = null)
@@ -45,6 +47,31 @@ internal sealed class ApiHttpException : Exception
     public static ApiHttpException NoResponse(HttpRequestMessage request, Exception innerException)
     {
         return new ApiHttpException(request.RequestUri?.ToString(), null, false, null, innerException);
+    }
+
+    public static ApiHttpException ResponseBodyNotReceived(HttpRequestMessage request, HttpStatusCode statusCode, Exception innerException)
+    {
+        return new ApiHttpException(request.RequestUri?.ToString(), statusCode, false, null, innerException)
+        {
+            IsResponseBodyNotReceived = true
+        };
+    }
+
+    public static async Task<TResult> ReadSuccessBodyAsync<TResult>(
+        HttpRequestMessage request,
+        HttpResponseMessage response,
+        Func<HttpResponseMessage, CancellationToken, Task<TResult>> responseReader,
+        CancellationToken timeoutToken,
+        CancellationToken callerToken)
+    {
+        try
+        {
+            return await responseReader(response, timeoutToken);
+        }
+        catch (Exception exception) when ((exception is OperationCanceledException && !callerToken.IsCancellationRequested) || exception is HttpRequestException)
+        {
+            throw ResponseBodyNotReceived(request, response.StatusCode, exception);
+        }
     }
 
     private static async Task<string> ReadResponseBodyAsync(HttpResponseMessage response, CancellationToken cancellationToken)

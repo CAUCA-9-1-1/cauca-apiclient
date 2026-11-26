@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Exceptions;
@@ -53,5 +54,29 @@ public class FluentTimeoutTests
         var action = () => repo.GetMockStringWithCancellationAsync(cancellationSource.Token).WaitAsync(MaximumAcceptedDuration);
 
         await action.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Test]
+    public async Task Request_SuccessStatusReceivedThenBodyStalls_IsNeverRetried()
+    {
+        var retryingRepo = new MockRepositoryWithRetries(configuration, new InstantRetryBuilder(), handler.CreateClientFactory());
+
+        var action = () => retryingRepo.GetMockStringAsync().WaitAsync(MaximumAcceptedDuration);
+
+        (await action.Should().ThrowAsync<ResponseBodyNotReceivedApiException>())
+            .Which.StatusCode.Should().Be(HttpStatusCode.OK);
+        handler.Requests.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task Request_HeadersTimeOut_IsRetried()
+    {
+        var retryHandler = new TestHttpMessageHandler();
+        retryHandler.EnqueueTimeout();
+        var retryingRepo = new MockRepositoryWithRetries(configuration, new InstantRetryBuilder(), retryHandler.CreateClientFactory());
+
+        await retryingRepo.GetMockStringAsync();
+
+        retryHandler.Requests.Should().HaveCount(2);
     }
 }

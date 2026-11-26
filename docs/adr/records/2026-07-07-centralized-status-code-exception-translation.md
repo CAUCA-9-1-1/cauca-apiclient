@@ -58,3 +58,23 @@ Add `UnexpectedStatusCodeApiException : ApiClientException`, exposing `StatusCod
 * Good: Every non-success status surfaces as a catchable `ApiClientException` subtype on the fluent stack.
 * Bad: Callers that inspected the message of the former internal exception for unmapped codes see a different type and message.
 
+## Amendment 2026-11-26: ResponseBodyNotReceivedApiException
+
+* Status: accepted
+* Date: 2026-11-26
+* Deciders: Cauca.ApiClient maintainers
+* Technical Story: https://github.com/CAUCA-9-1-1/cauca-apiclient/issues/12
+
+### Context
+
+The request timeout now covers reading the response body. A body that cannot be read after a status was received must be distinguishable from a request that got no answer, because the server may already have processed the request.
+
+### Decision
+
+Add `ResponseBodyNotReceivedApiException : NoResponseApiException`, exposing `StatusCode`. `ApiHttpException` flags the case, and an internal `RestResponseValidator.ThrowExceptionForApiHttpException` throws the new exception for it and delegates to `ThrowExceptionForStatusCode` otherwise, so the validator stays the single translation point.
+
+### Consequences
+
+* Good: Callers can catch `NoResponseApiException` for both cases, or the subtype to know a status was received.
+* Bad: `NoResponseApiException` gained a protected constructor taking a message (additive).
+

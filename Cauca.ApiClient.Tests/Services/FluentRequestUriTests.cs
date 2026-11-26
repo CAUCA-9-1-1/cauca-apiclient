@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Tests.Helpers;
 using Cauca.ApiClient.Tests.Mocks;
@@ -73,5 +74,42 @@ public class FluentRequestUriTests
         await repo.GetStringWithSegmentAsync("orders", "a/b");
 
         handler.Requests.Should().ContainSingle().Which.Uri.AbsolutePath.Should().Be("/orders/a%2Fb");
+    }
+
+    [Test]
+    public async Task AppendSegment_RouteContainsQuery_PlacesSegmentInPathBeforeQuery()
+    {
+        await repo.GetStringWithSegmentAsync("orders?status=open", 5);
+
+        var uri = handler.Requests.Should().ContainSingle().Which.Uri;
+        uri.AbsolutePath.Should().Be("/orders/5");
+        uri.Query.Should().Be("?status=open");
+    }
+
+    [Test]
+    public async Task AppendSegment_ValueHasLeadingAndTrailingSlashes_TrimsThemBeforeEscaping()
+    {
+        await repo.GetStringWithSegmentAsync("orders", "/details/");
+
+        handler.Requests.Should().ContainSingle().Which.Uri.AbsolutePath.Should().Be("/orders/details");
+    }
+
+    [TestCase(".")]
+    [TestCase("..")]
+    [TestCase("/..")]
+    public async Task AppendSegment_ValueNavigatesThePath_ThrowsArgumentException(string segment)
+    {
+        var action = () => repo.GetStringWithSegmentAsync("orders", segment);
+
+        await action.Should().ThrowAsync<ArgumentException>().WithMessage($"*'{segment}'*");
+    }
+
+    [TestCase("...")]
+    [TestCase("a..b")]
+    public async Task AppendSegment_ValueContainsDotsButIsNotNavigation_IsAccepted(string segment)
+    {
+        await repo.GetStringWithSegmentAsync("orders", segment);
+
+        handler.Requests.Should().ContainSingle().Which.Uri.AbsolutePath.Should().Be($"/orders/{segment}");
     }
 }

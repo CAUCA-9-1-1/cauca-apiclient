@@ -145,7 +145,7 @@ internal sealed class FluentRefreshTokenHandler(
                 }
 
                 using (response)
-                    return await responseReader(response, timeoutTokenSource.Token);
+                    return await ApiHttpException.ReadSuccessBodyAsync(request, response, responseReader, timeoutTokenSource.Token, cancellationToken);
             }
             catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
             {
