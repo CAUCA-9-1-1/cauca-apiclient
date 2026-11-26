@@ -71,20 +71,25 @@ Example:
 1. Bump `<Version>`, `<AssemblyVersion>`, and `<FileVersion>` in
    `Cauca.ApiClient.csproj` to the new value.
 2. Update `<PackageReleaseNotes>` in the same `.csproj` to describe the release.
-3. Commit, push, and merge to the `main` branch.
-4. Run a dry run to preview what will be pushed — nothing is published:
+3. Update the Claude Code skill in `claude-plugins/cauca-apiclient/skills/cauca-apiclient/`
+   when the release changes a public API, a default, an exception mapping or the
+   retry or authentication behaviour. Bump the version and the "checked against"
+   date at the top of `SKILL.md`. The `cauca-ai-tools` marketplace serves the
+   skill from the `main` branch, so consumers get it once it is merged.
+4. Commit, push, and merge to the `main` branch.
+5. Run a dry run to preview what will be pushed — nothing is published:
 
    ```powershell
    .\release.ps1 -WhatIf
    ```
 
-5. Run the full release when ready:
+6. Run the full release when ready:
 
    ```powershell
    .\release.ps1
    ```
 
-6. Tag the released commit and push the tag. Use the `v<MAJOR>.<MINOR>.<PATCH>`
+7. Tag the released commit and push the tag. Use the `v<MAJOR>.<MINOR>.<PATCH>`
    convention (e.g. `v4.1.0`), matching the `<Version>`. Tag the exact commit on
    the `main` branch that was published:
 
@@ -104,5 +109,5 @@ Example:
 - Pack `Cauca.ApiClient` into `./artifacts/nupkg`.
 - Push the produced `.nupkg` to the `CaucaNuget` feed.
 
-It does **not** create the git tag — tagging is a manual step (6 above) so the
+It does **not** create the git tag — tagging is a manual step (7 above) so the
 tag is only applied once the push has actually succeeded.
