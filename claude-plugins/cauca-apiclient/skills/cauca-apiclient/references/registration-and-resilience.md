@@ -64,11 +64,17 @@ calls race on the token refresh. Resolve it from a scope per unit of work.
 
 ## Timeouts
 
-`RequestTimeoutInSeconds` bounds each attempt (login and refresh included), body read included. A
-server that sends its headers and then stalls fails the call with `ResponseBodyNotReceivedApiException`
-(a `NoResponseApiException` with the received `StatusCode`), **without retry**: the server already
-handled the request. The named `HttpClient` has an infinite timeout, so this setting and the caller's
-token are the only bounds. A caller cancelling its token still gets `OperationCanceledException`.
+`RequestTimeoutInSeconds` bounds each attempt (login and refresh included), body read included. When
+the status arrived but the body stalls or the connection is cut while reading it, nothing is retried
+(the server already handled the request):
+- an API call throws `ResponseBodyNotReceivedApiException` (a `NoResponseApiException` with the
+  received `StatusCode`);
+- a login throws a plain `NoResponseApiException`;
+- a refresh failure is swallowed: the token is cleared and the resent request usually ends in
+  `UnauthorizedApiException`.
+
+The named `HttpClient` has an infinite timeout, so this setting and the caller's token are the only
+bounds. A caller cancelling its token still gets `OperationCanceledException`.
 
 With the default retry policy, one failing phase can take 4 × timeout + 2 + 4 + 8 seconds. A secure
 client may chain several phases (login, request, refresh, re-login, resent request), each with that

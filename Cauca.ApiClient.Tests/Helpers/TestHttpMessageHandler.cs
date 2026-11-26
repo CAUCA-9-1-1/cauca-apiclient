@@ -51,6 +51,15 @@ public sealed class TestHttpMessageHandler : HttpMessageHandler
         }));
     }
 
+    public void EnqueueBrokenBodyResponse(HttpStatusCode statusCode = HttpStatusCode.OK)
+    {
+        _responses.Enqueue((request, _) => Task.FromResult(new HttpResponseMessage(statusCode)
+        {
+            RequestMessage = request,
+            Content = new BrokenConnectionContent()
+        }));
+    }
+
     public void EnqueueTimeout()
     {
         _responses.Enqueue((_, cancellationToken) => Task.FromException<HttpResponseMessage>(new OperationCanceledException("Simulated timeout.", new TimeoutException(), cancellationToken)));
@@ -174,5 +183,58 @@ internal sealed class StalledContent : HttpContent
     {
         length = -1;
         return false;
+    }
+}
+
+internal sealed class BrokenConnectionContent : HttpContent
+{
+    public BrokenConnectionContent()
+    {
+        Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
+    }
+
+    protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+    {
+        throw new IOException("Simulated connection cut.");
+    }
+
+    protected override Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken)
+    {
+        return Task.FromResult<Stream>(new BrokenStream());
+    }
+
+    protected override bool TryComputeLength(out long length)
+    {
+        length = -1;
+        return false;
+    }
+
+    private sealed class BrokenStream : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            throw new IOException("Simulated connection cut.");
+        }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            throw new IOException("Simulated connection cut.");
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

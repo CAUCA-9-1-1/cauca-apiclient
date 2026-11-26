@@ -28,7 +28,7 @@ public class RestResponseValidator
     internal void ThrowExceptionForApiHttpException(ApiHttpException exception)
     {
         if (exception.IsResponseBodyNotReceived)
-            throw new ResponseBodyNotReceivedApiException(exception.RequestUri, exception.StatusCode!.Value, exception);
+            throw new ResponseBodyNotReceivedApiException(exception.RequestUri, exception.StatusCode.GetValueOrDefault(), exception);
 
         ThrowExceptionForStatusCode(exception.RequestUri, exception.AnswerReceived, exception.StatusCode, exception, exception.ResponseBody);
     }

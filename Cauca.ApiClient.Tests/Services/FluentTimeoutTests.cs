@@ -79,4 +79,32 @@ public class FluentTimeoutTests
 
         retryHandler.Requests.Should().HaveCount(2);
     }
+
+    [Test]
+    public async Task Request_ConnectionCutWhileReadingJsonBody_IsNeverRetried()
+    {
+        var retryHandler = new TestHttpMessageHandler();
+        retryHandler.EnqueueBrokenBodyResponse(HttpStatusCode.Created);
+        var retryingRepo = new MockRepositoryWithRetries(configuration, new InstantRetryBuilder(), retryHandler.CreateClientFactory());
+
+        var action = () => retryingRepo.PostMockAsync(new MockEntity());
+
+        (await action.Should().ThrowAsync<ResponseBodyNotReceivedApiException>())
+            .Which.StatusCode.Should().Be(HttpStatusCode.Created);
+        retryHandler.Requests.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task Request_ConnectionCutWhileReadingStreamBody_IsNeverRetried()
+    {
+        var retryHandler = new TestHttpMessageHandler();
+        retryHandler.EnqueueBrokenBodyResponse();
+        var retryingRepo = new MockRepositoryWithRetries(configuration, new InstantRetryBuilder(), retryHandler.CreateClientFactory());
+
+        var action = () => retryingRepo.GetMockStreamAsync();
+
+        (await action.Should().ThrowAsync<ResponseBodyNotReceivedApiException>())
+            .Which.StatusCode.Should().Be(HttpStatusCode.OK);
+        retryHandler.Requests.Should().ContainSingle();
+    }
 }

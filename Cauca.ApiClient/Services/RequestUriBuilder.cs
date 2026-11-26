@@ -24,7 +24,7 @@ internal static class RequestUriBuilder
     {
         var normalizedBaseUrl = (baseUrl ?? string.Empty).TrimEnd('/') + "/";
         var sanitizedPrefix = TrimPathSegment(apiPrefix);
-        var sanitizedUrl = TrimPathSegment(url);
+        var sanitizedUrl = TrimRoute(url);
         var baseUri = string.IsNullOrWhiteSpace(sanitizedPrefix)
             ? new Uri(new Uri(normalizedBaseUrl, UriKind.Absolute), sanitizedUrl)
             : new Uri(new Uri(normalizedBaseUrl, UriKind.Absolute), $"{sanitizedPrefix}/{sanitizedUrl}");
@@ -55,6 +55,17 @@ internal static class RequestUriBuilder
         var separatorIndex = queryPart.IndexOf('=');
         var rawKey = separatorIndex < 0 ? queryPart : queryPart[..separatorIndex];
         return Uri.UnescapeDataString(rawKey);
+    }
+
+    private static string TrimRoute(string route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+            return string.Empty;
+
+        var queryIndex = route.IndexOf('?');
+        return queryIndex < 0
+            ? TrimPathSegment(route)
+            : TrimPathSegment(route[..queryIndex]) + route[queryIndex..];
     }
 
     private static string TrimPathSegment(string value)

@@ -146,7 +146,7 @@ public abstract class FluentBaseService<TConfiguration> : IFluentRequestExecutor
             if (!response.IsSuccessStatusCode)
                 throw await ApiHttpException.CreateAsync(request, response, timeoutTokenSource.Token);
 
-            return await ApiHttpException.ReadSuccessBodyAsync(request, response, responseReader, timeoutTokenSource.Token, cancellationToken);
+            return await SuccessResponseBodyReader.ReadAsync(request, response, responseReader, timeoutTokenSource.Token, cancellationToken);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {

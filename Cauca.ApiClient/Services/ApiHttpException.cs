@@ -57,23 +57,6 @@ internal sealed class ApiHttpException : Exception
         };
     }
 
-    public static async Task<TResult> ReadSuccessBodyAsync<TResult>(
-        HttpRequestMessage request,
-        HttpResponseMessage response,
-        Func<HttpResponseMessage, CancellationToken, Task<TResult>> responseReader,
-        CancellationToken timeoutToken,
-        CancellationToken callerToken)
-    {
-        try
-        {
-            return await responseReader(response, timeoutToken);
-        }
-        catch (Exception exception) when ((exception is OperationCanceledException && !callerToken.IsCancellationRequested) || exception is HttpRequestException)
-        {
-            throw ResponseBodyNotReceived(request, response.StatusCode, exception);
-        }
-    }
-
     private static async Task<string> ReadResponseBodyAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (response?.Content is null)

@@ -32,4 +32,13 @@ public class RequestUriBuilderTests
 
         uri.Query.Should().Contain("status=open").And.Contain("page=2").And.NotContain("Page=1");
     }
+
+    [Test]
+    public void BuildUri_RouteQueryValueEndsWithSlash_KeepsQueryAsWritten()
+    {
+        var uri = RequestUriBuilder.BuildUri("http://test/", null, "/files/?path=/");
+
+        uri.AbsolutePath.Should().Be("/files");
+        uri.Query.Should().Be("?path=/");
+    }
 }

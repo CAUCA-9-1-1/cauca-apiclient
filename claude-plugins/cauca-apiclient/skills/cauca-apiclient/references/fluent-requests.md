@@ -110,9 +110,9 @@ Status codes are mapped after retries (see [registration-and-resilience.md](regi
 
 On a secure client, the request resent after a token refresh goes through the same mapping.
 
-All mapped exceptions derive from `ApiClientException`. For 400, 403, 404, 500 and unexpected codes the server's body is
-in the `Body` property (`ResponseBody` stays `null`); `UnauthorizedApiException` and
-`NoResponseApiException` carry none. The helpers read it too:
+All mapped exceptions derive from `ApiClientException`. For 400, 403, 404, 500 and unexpected codes
+the server's body is in the `Body` property (`ResponseBody` stays `null`); `UnauthorizedApiException`
+and `NoResponseApiException` carry none. The helpers read it too:
 
 ```csharp
 catch (BadParameterApiException exception)
