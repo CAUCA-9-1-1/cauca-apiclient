@@ -36,40 +36,13 @@ public abstract class FluentBaseSecureService<TConfiguration> : FluentBaseServic
     protected override async Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> request, CancellationToken cancellationToken)
     {
         await LoginWhenLoggedOut(cancellationToken);
-        try
-        {
-            return await request(cancellationToken);
-        }
-        catch (ApiHttpException exception)
-        {
-            if (exception.AccessTokenIsExpired())
-                return await RefreshTokenThenRetry(request, cancellationToken);
-
-            new RestResponseValidator()
-                .ThrowExceptionForStatusCode(exception.RequestUri, exception.AnswerReceived, exception.StatusCode, exception, exception.ResponseBody);
-            throw;
-        }
+        return await base.ExecuteAsync(token => RetryOnceAfterTokenRefresh(request, token), cancellationToken);
     }
 
     protected override async Task ExecuteAsync(Func<CancellationToken, Task> request, CancellationToken cancellationToken)
     {
         await LoginWhenLoggedOut(cancellationToken);
-        try
-        {
-            await request(cancellationToken);
-        }
-        catch (ApiHttpException exception)
-        {
-            if (exception.AccessTokenIsExpired())
-            {
-                await RefreshTokenThenRetry(request, cancellationToken);
-                return;
-            }
-
-            new RestResponseValidator()
-                .ThrowExceptionForStatusCode(exception.RequestUri, exception.AnswerReceived, exception.StatusCode, exception, exception.ResponseBody);
-            throw;
-        }
+        await base.ExecuteAsync(token => RetryOnceAfterTokenRefresh(request, token), cancellationToken);
     }
 
     protected async Task LoginWhenLoggedOut(CancellationToken cancellationToken)
@@ -78,16 +51,30 @@ public abstract class FluentBaseSecureService<TConfiguration> : FluentBaseServic
             await GetRefreshTokenHandler().Login(cancellationToken);
     }
 
-    private async Task<TResult> RefreshTokenThenRetry<TResult>(Func<CancellationToken, Task<TResult>> action, CancellationToken cancellationToken)
+    private async Task<TResult> RetryOnceAfterTokenRefresh<TResult>(Func<CancellationToken, Task<TResult>> request, CancellationToken cancellationToken)
     {
-        await GetRefreshTokenHandler().RefreshToken(cancellationToken);
-        return await action(cancellationToken);
+        try
+        {
+            return await request(cancellationToken);
+        }
+        catch (ApiHttpException exception) when (exception.AccessTokenIsExpired())
+        {
+            await GetRefreshTokenHandler().RefreshToken(cancellationToken);
+            return await request(cancellationToken);
+        }
     }
 
-    private async Task RefreshTokenThenRetry(Func<CancellationToken, Task> action, CancellationToken cancellationToken)
+    private async Task RetryOnceAfterTokenRefresh(Func<CancellationToken, Task> request, CancellationToken cancellationToken)
     {
-        await GetRefreshTokenHandler().RefreshToken(cancellationToken);
-        await action(cancellationToken);
+        try
+        {
+            await request(cancellationToken);
+        }
+        catch (ApiHttpException exception) when (exception.AccessTokenIsExpired())
+        {
+            await GetRefreshTokenHandler().RefreshToken(cancellationToken);
+            await request(cancellationToken);
+        }
     }
 
     private FluentRefreshTokenHandler GetRefreshTokenHandler()

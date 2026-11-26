@@ -41,6 +41,15 @@ public sealed class TestHttpMessageHandler : HttpMessageHandler
         _responses.Enqueue((request, _) => Task.FromResult(CreateResponse(request, statusCode, body, contentType, headers)));
     }
 
+    public void EnqueueStalledBodyResponse(TimeSpan stallDuration)
+    {
+        _responses.Enqueue((request, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = request,
+            Content = new StalledContent(stallDuration)
+        }));
+    }
+
     public void EnqueueTimeout()
     {
         _responses.Enqueue((_, cancellationToken) => Task.FromException<HttpResponseMessage>(new OperationCanceledException("Simulated timeout.", new TimeoutException(), cancellationToken)));
@@ -87,10 +96,11 @@ public sealed class TestHttpMessageHandler : HttpMessageHandler
 
 public sealed class RecordedRequest
 {
-    private RecordedRequest(HttpMethod method, string requestUri, string body, IReadOnlyDictionary<string, string[]> headers)
+    private RecordedRequest(HttpMethod method, Uri uri, string body, IReadOnlyDictionary<string, string[]> headers)
     {
         Method = method;
-        RequestUri = requestUri;
+        Uri = uri;
+        RequestUri = uri?.ToString();
         Body = body;
         Headers = headers;
     }
@@ -98,6 +108,8 @@ public sealed class RecordedRequest
     public HttpMethod Method { get; }
 
     public string RequestUri { get; }
+
+    public Uri Uri { get; }
 
     public string Body { get; }
 
@@ -125,8 +137,40 @@ public sealed class RecordedRequest
 
         return new RecordedRequest(
             request.Method,
-            request.RequestUri?.ToString(),
+            request.RequestUri,
             body,
             headers);
+    }
+}
+internal sealed class StalledContent : HttpContent
+{
+    private readonly TimeSpan _stallDuration;
+
+    public StalledContent(TimeSpan stallDuration)
+    {
+        _stallDuration = stallDuration;
+    }
+
+    protected override Task SerializeToStreamAsync(System.IO.Stream stream, System.Net.TransportContext context)
+    {
+        return SerializeToStreamAsync(stream, context, CancellationToken.None);
+    }
+
+    protected override async Task SerializeToStreamAsync(System.IO.Stream stream, System.Net.TransportContext context, CancellationToken cancellationToken)
+    {
+        await Task.Delay(_stallDuration, cancellationToken);
+        await stream.WriteAsync(Encoding.UTF8.GetBytes("late"), cancellationToken);
+    }
+
+    protected override async Task<System.IO.Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken)
+    {
+        await Task.Delay(_stallDuration, cancellationToken);
+        return new System.IO.MemoryStream(Encoding.UTF8.GetBytes("late"));
+    }
+
+    protected override bool TryComputeLength(out long length)
+    {
+        length = -1;
+        return false;
     }
 }

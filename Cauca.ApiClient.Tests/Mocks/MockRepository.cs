@@ -85,5 +85,20 @@ namespace Cauca.ApiClient.Tests.Mocks
         {
             return Request(url).GetStringAsync();
         }
-    }
+
+        public Task<string> GetStringWithSegmentAsync(string route, object segment)
+        {
+            return Request(route).AppendSegment(segment).GetStringAsync();
+        }
+
+        public Task<string> GetStringWithQueryParameterAsync(string route, string name, object value)
+        {
+            return Request(route).AddQueryParameter(name, value).GetStringAsync();
+        }
+
+        public Task<string> GetMockStringWithCancellationAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            return Request("mock").GetStringAsync(cancellationToken);
+        }
+}
 }

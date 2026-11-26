@@ -121,7 +121,7 @@ public abstract class FluentBaseService<TConfiguration> : IFluentRequestExecutor
         await RetryPolicy.ExecuteAsync(async () =>
         {
             using var httpRequest = GenerateRequest(method, request, CreateContent(method, request));
-            using var response = await SendCoreAsync(httpRequest, cancellationToken);
+            await SendCoreAsync(httpRequest, cancellationToken, static (_, _) => Task.FromResult(true));
         });
     }
 
@@ -130,23 +130,25 @@ public abstract class FluentBaseService<TConfiguration> : IFluentRequestExecutor
         return await RetryPolicy.ExecuteAsync(async () =>
         {
             using var httpRequest = GenerateRequest(method, request, CreateContent(method, request));
-            using var response = await SendCoreAsync(httpRequest, cancellationToken);
-            return await ReadValueAsync<TResult>(response, cancellationToken);
+            return await SendCoreAsync(httpRequest, cancellationToken, ReadValueAsync<TResult>);
         });
     }
 
-    private async Task<HttpResponseMessage> SendCoreAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    private async Task<TResult> SendCoreAsync<TResult>(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken,
+        Func<HttpResponseMessage, CancellationToken, Task<TResult>> responseReader)
     {
         using var timeoutTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutTokenSource.CancelAfter(TimeSpan.FromSeconds(Configuration.RequestTimeoutInSeconds));
 
         try
         {
-            var response = await Client().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutTokenSource.Token);
-            if (response.IsSuccessStatusCode)
-                return response;
+            using var response = await Client().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutTokenSource.Token);
+            if (!response.IsSuccessStatusCode)
+                throw await ApiHttpException.CreateAsync(request, response, timeoutTokenSource.Token);
 
-            throw await ApiHttpException.CreateAsync(request, response, cancellationToken);
+            return await responseReader(response, timeoutTokenSource.Token);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {

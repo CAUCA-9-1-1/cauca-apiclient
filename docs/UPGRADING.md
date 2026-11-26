@@ -130,6 +130,16 @@ await Request("customers")
     .GetAsync<OrderDto>();
 ```
 
+## Behaviour changes
+
+The fluent request pipeline behaves differently from earlier fluent releases in these cases:
+
+- Path segments are escaped with `Uri.EscapeDataString`. One value is exactly one segment: `/`, `?` and `#` inside a value are sent as `%2F`, `%3F` and `%23`. Callers that passed `"a/b"` to get two segments must call `AppendSegments("a", "b")`.
+- A query string written in the route (`Request("orders?status=open")`) is kept and merged with the builder parameters. A builder parameter replaces a route parameter of the same name (case-insensitive); a builder parameter set to `null` removes it.
+- A status code without a dedicated exception (for example 409 or 422) now throws `UnexpectedStatusCodeApiException`, which derives from `ApiClientException` and exposes `StatusCode`. It was an internal exception type that callers could not catch.
+- A request resent after an access-token refresh goes through the same status-code translation as the first attempt (a 404 now throws `NotFoundApiException`).
+- `RequestTimeoutInSeconds` covers the whole attempt, including reading the response body (and the login and refresh calls). A stalled body now throws `NoResponseApiException` instead of waiting indefinitely.
+
 ## Secure clients
 
 `FluentBaseSecureService<TConfiguration>` keeps the same high-level behavior as the legacy secure base:

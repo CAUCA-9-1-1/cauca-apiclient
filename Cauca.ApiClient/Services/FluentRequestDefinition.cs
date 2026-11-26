@@ -30,7 +30,7 @@ internal sealed class FluentRequestDefinition
             if (segment is null)
                 continue;
 
-            Segments.Add(Convert.ToString(segment, CultureInfo.InvariantCulture));
+            Segments.Add(Uri.EscapeDataString(Convert.ToString(segment, CultureInfo.InvariantCulture)));
         }
     }
 

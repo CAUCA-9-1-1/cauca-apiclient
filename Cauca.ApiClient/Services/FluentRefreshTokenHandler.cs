@@ -141,11 +141,11 @@ internal sealed class FluentRefreshTokenHandler(
                 if (!response.IsSuccessStatusCode)
                 {
                     using (response)
-                        throw await ApiHttpException.CreateAsync(request, response, cancellationToken);
+                        throw await ApiHttpException.CreateAsync(request, response, timeoutTokenSource.Token);
                 }
 
                 using (response)
-                    return await responseReader(response, cancellationToken);
+                    return await responseReader(response, timeoutTokenSource.Token);
             }
             catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
             {
