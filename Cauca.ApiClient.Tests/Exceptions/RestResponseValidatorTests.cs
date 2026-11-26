@@ -56,5 +56,27 @@ namespace Cauca.ApiClient.Tests.Exceptions
         {
             Assert.Throws<Exception>(() => new RestResponseValidator().ThrowExceptionForStatusCode("test", true, HttpStatusCode.OK, new Exception("Test")));
         }
+
+        [Test]
+        public void CorrectlyThrowsUnexpectedStatusCodeForUnmappedCodeWithAnswer()
+        {
+            var exception = Assert.Throws<UnexpectedStatusCodeApiException>(() => new RestResponseValidator().ThrowExceptionForStatusCode("test", true, HttpStatusCode.Conflict, new Exception("Test")));
+
+            Assert.That(exception.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+        }
+
+        [Test]
+        public void ThrowsNoResponseForUnmappedCodeWhenAnswerIsNotReported()
+        {
+            Assert.Throws<NoResponseApiException>(() => new RestResponseValidator().ThrowExceptionForStatusCode("test", false, HttpStatusCode.Conflict, new Exception("Test")));
+        }
+
+        [Test]
+        public void UnexpectedStatusCodeMessageDoesNotRepeatTheCodeWhenItHasNoName()
+        {
+            var exception = Assert.Throws<UnexpectedStatusCodeApiException>(() => new RestResponseValidator().ThrowExceptionForStatusCode("test", true, (HttpStatusCode)499, new Exception("Test")));
+
+            Assert.That(exception.Message, Is.EqualTo("API returned a 499 response for url 'test'."));
+        }
     }
 }

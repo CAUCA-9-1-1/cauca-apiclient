@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using Cauca.ApiClient.Configuration;
 
@@ -23,16 +24,48 @@ internal static class RequestUriBuilder
     {
         var normalizedBaseUrl = (baseUrl ?? string.Empty).TrimEnd('/') + "/";
         var sanitizedPrefix = TrimPathSegment(apiPrefix);
-        var sanitizedUrl = TrimPathSegment(url);
+        var sanitizedUrl = TrimRoute(url);
         var baseUri = string.IsNullOrWhiteSpace(sanitizedPrefix)
             ? new Uri(new Uri(normalizedBaseUrl, UriKind.Absolute), sanitizedUrl)
             : new Uri(new Uri(normalizedBaseUrl, UriKind.Absolute), $"{sanitizedPrefix}/{sanitizedUrl}");
+        var parameters = EnumerateParameters(queryParameters).ToList();
         var uriBuilder = new UriBuilder(baseUri)
         {
-            Query = BuildQueryString(queryParameters)
+            Query = MergeQueries(baseUri.Query, parameters)
         };
 
         return uriBuilder.Uri;
+    }
+
+    private static string MergeQueries(string routeQuery, List<(string Key, object Value)> parameters)
+    {
+        var overriddenKeys = parameters
+            .Where(parameter => !string.IsNullOrWhiteSpace(parameter.Key))
+            .Select(parameter => parameter.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var keptRouteParts = routeQuery.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Where(part => !overriddenKeys.Contains(GetUnescapedKey(part)));
+
+        return string.Join("&", keptRouteParts.Concat(BuildQueryParts(parameters)));
+    }
+
+    private static string GetUnescapedKey(string queryPart)
+    {
+        var separatorIndex = queryPart.IndexOf('=');
+        var rawKey = separatorIndex < 0 ? queryPart : queryPart[..separatorIndex];
+        return Uri.UnescapeDataString(rawKey);
+    }
+
+    private static string TrimRoute(string route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+            return string.Empty;
+
+        var queryIndex = route.IndexOf('?');
+        return queryIndex < 0
+            ? TrimPathSegment(route)
+            : TrimPathSegment(route[..queryIndex]) + route[queryIndex..];
     }
 
     private static string TrimPathSegment(string value)
@@ -40,18 +73,15 @@ internal static class RequestUriBuilder
         return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim('/');
     }
 
-    private static string BuildQueryString(object queryParameters)
+    private static IEnumerable<string> BuildQueryParts(IEnumerable<(string Key, object Value)> parameters)
     {
-        var segments = new List<string>();
-        foreach (var (key, value) in EnumerateParameters(queryParameters))
+        foreach (var (key, value) in parameters)
         {
             if (string.IsNullOrWhiteSpace(key) || value is null)
                 continue;
 
-            segments.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(Convert.ToString(value, CultureInfo.InvariantCulture))}");
+            yield return $"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(Convert.ToString(value, CultureInfo.InvariantCulture))}";
         }
-
-        return string.Join("&", segments);
     }
 
     internal static IEnumerable<(string Key, object Value)> EnumerateParameters(object queryParameters)

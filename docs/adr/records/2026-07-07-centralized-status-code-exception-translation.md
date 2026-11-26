@@ -37,3 +37,44 @@ Chosen option: **Option A**, because one translation point produces uniform type
 - `ApiHttpException` carries `RequestUri`, `StatusCode`, and `ResponseBody` from the transport failure into translation.
 - Each handled status code maps to its dedicated typed exception; unmapped failures surface as an unexpected-result exception.
 - Auth-expiry signals drive the secure refresh/re-login flows; keep them consistent with [Reactive Token Lifecycle For Secure Services](2026-07-07-reactive-secure-service-token-lifecycle.md) and [Self-Authenticating External-System Delegating Handler With Single-Flight Re-Auth](2026-07-07-external-system-self-auth-handler.md).
+
+## Amendment 2026-11-26: UnexpectedStatusCodeApiException
+
+* Status: accepted
+* Date: 2026-11-26
+* Deciders: Cauca.ApiClient maintainers
+* Technical Story: https://github.com/CAUCA-9-1-1/cauca-apiclient/issues/12
+
+### Context
+
+A status code with a received answer but no dedicated exception (for example 409 or 422) used to rethrow the internal `ApiHttpException`, which consumers cannot catch by type.
+
+### Decision
+
+Add `UnexpectedStatusCodeApiException : ApiClientException`, exposing `StatusCode`, to the typed exceptions. `RestResponseValidator.ThrowExceptionForStatusCode` throws it when an answer was received and the code is not 2xx and not otherwise mapped. The legacy stack still reports unmapped codes as `NoResponseApiException`, because it passes `Call.Succeeded` as `answerReceived`.
+
+### Consequences
+
+* Good: Every non-success status surfaces as a catchable `ApiClientException` subtype on the fluent stack.
+* Bad: Callers that inspected the message of the former internal exception for unmapped codes see a different type and message.
+
+## Amendment 2026-11-26: ResponseBodyNotReceivedApiException
+
+* Status: accepted
+* Date: 2026-11-26
+* Deciders: Cauca.ApiClient maintainers
+* Technical Story: https://github.com/CAUCA-9-1-1/cauca-apiclient/issues/12
+
+### Context
+
+The request timeout now covers reading the response body. A body that cannot be read after a status was received must be distinguishable from a request that got no answer, because the server may already have processed the request.
+
+### Decision
+
+Add `ResponseBodyNotReceivedApiException : NoResponseApiException`, exposing `StatusCode`. `ApiHttpException` flags the case, and an internal `RestResponseValidator.ThrowExceptionForApiHttpException` throws the new exception for it and delegates to `ThrowExceptionForStatusCode` otherwise, so the validator stays the single translation point.
+
+### Consequences
+
+* Good: Callers can catch `NoResponseApiException` for both cases, or the subtype to know a status was received.
+* Bad: `NoResponseApiException` gained a protected constructor taking a message (additive).
+

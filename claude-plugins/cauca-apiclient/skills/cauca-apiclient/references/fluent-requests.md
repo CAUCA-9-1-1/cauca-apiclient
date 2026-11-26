@@ -7,8 +7,8 @@ to be reused.
 ## URL
 
 Final URL: `{ApiBaseUrl}/{apiPrefix}/{route}/{segment}/{segment}?{query}`. The trailing slash of the
-base URL and the slashes at both ends of the prefix, the route and each segment are trimmed, then the
-parts are rejoined.
+base URL and the slashes at both ends of the prefix and the route are trimmed, then the parts are
+rejoined.
 
 ```csharp
 Request("customers").AppendSegments(customerId, "orders", orderId)
@@ -18,10 +18,18 @@ Request("customers").AppendSegments(customerId, "orders", orderId)
 - `AppendSegment(object)` / `AppendSegments(params object[])`: values pass through
   `Convert.ToString(value, InvariantCulture)`. `null` segments are skipped, which shortens the route
   without an error. Check required ids before the call.
-- Segments are **not escaped**. `/`, `?` and `#` keep their URL meaning; `Uri` escapes only illegal
-  characters such as spaces. Escape free-text values: `AppendSegment(Uri.EscapeDataString(name))`.
-- Never put a query string in the route. The builder sets the URI query from its parameters and
-  replaces whatever the route contained, even when there are no parameters.
+- Each segment is trimmed of leading and trailing `/` (`"/details"` → `details`), then escaped with
+  `Uri.EscapeDataString`: an inner `/`, `?`, `#`, spaces and `%` are encoded, so one value is exactly
+  one segment (`AppendSegment("a/b?c")` → `a%2Fb%3Fc`). Do not escape values yourself (`%` would
+  become `%25`). To add several path pieces, pass them separately: `AppendSegments("a", "b")`.
+- A segment equal to `.` or `..` (after trimming) throws `ArgumentException`: `System.Uri` would
+  otherwise normalise it and call another endpoint. `...` or `a..b` are accepted.
+- The route itself is not escaped. A query string in the route is kept and merged with the builder's
+  parameters: `Request("orders?status=open").AddQueryParameter("page", 2)` → `orders?status=open&page=2`.
+  A builder parameter whose name matches a route parameter (case-insensitive) replaces it; a `null`
+  builder value removes it. Segments still go into the path:
+  `Request("orders?status=open").AppendSegment(5)` → `orders/5?status=open`. Prefer the builder
+  methods for new code.
 
 ## Query parameters
 
@@ -97,16 +105,14 @@ Status codes are mapped after retries (see [registration-and-resilience.md](regi
 | 404 | `NotFoundApiException` |
 | 500 | `InternalErrorApiException` |
 | no response, timeout | `NoResponseApiException` |
-| anything else | internal `ApiHttpException` — catch it as `Exception`; its message holds the URL and the status |
+| status received, body not received (timeout or cut while reading it) | `ResponseBodyNotReceivedApiException` (derives from `NoResponseApiException`, has `StatusCode`); never retried |
+| any other non-2xx (409, 422, 429, 503 after retries…) | `UnexpectedStatusCodeApiException`, with `StatusCode` |
 
-This mapping covers the first attempt of a secure client only. When the access token was expired, the
-client refreshes and resends the request outside the mapping: any failure of the resent request
-(401, 404, 500…) escapes as the internal `ApiHttpException`. Catch `Exception` as well around secure
-calls.
+On a secure client, the request resent after a token refresh goes through the same mapping.
 
-All mapped exceptions derive from `ApiClientException`. For 400, 403, 404 and 500 the server's body is
-in the `Body` property (`ResponseBody` stays `null`); `UnauthorizedApiException` and
-`NoResponseApiException` carry none. The helpers read it too:
+All mapped exceptions derive from `ApiClientException`. For 400, 403, 404, 500 and unexpected codes
+the server's body is in the `Body` property (`ResponseBody` stays `null`); `UnauthorizedApiException`
+and `NoResponseApiException` carry none. The helpers read it too:
 
 ```csharp
 catch (BadParameterApiException exception)

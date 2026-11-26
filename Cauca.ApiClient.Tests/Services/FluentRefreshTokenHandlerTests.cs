@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
@@ -109,5 +110,32 @@ public class FluentRefreshTokenHandlerTests
 
         var thrown = (await action.Should().ThrowAsync<InternalErrorApiException>()).Which;
         thrown.ToString().Should().NotContain(ApiKey);
+    }
+
+    [Test]
+    public async Task LoginWhenBodyStallsAfterHeadersThrowsNoResponseApiExceptionWithinTimeout()
+    {
+        configuration.RequestTimeoutInSeconds = 1;
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueStalledBodyResponse(TimeSpan.FromSeconds(5));
+        var tokenHandler = new FluentRefreshTokenHandler(configuration, accessInformation, noRetryPolicy, handler.CreateClientFactory());
+
+        var action = () => tokenHandler.Login().WaitAsync(TimeSpan.FromSeconds(4));
+
+        await action.Should().ThrowAsync<NoResponseApiException>();
+        handler.Requests.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task RefreshTokenWhenBodyStallsAfterHeadersCompletesWithinTimeout()
+    {
+        configuration.RequestTimeoutInSeconds = 1;
+        var handler = new TestHttpMessageHandler();
+        handler.EnqueueStalledBodyResponse(TimeSpan.FromSeconds(5));
+        var tokenHandler = new FluentRefreshTokenHandler(configuration, accessInformation, noRetryPolicy, handler.CreateClientFactory());
+
+        var action = () => tokenHandler.RefreshToken().WaitAsync(TimeSpan.FromSeconds(4));
+
+        await action.Should().NotThrowAsync();
     }
 }

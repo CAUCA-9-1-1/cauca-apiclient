@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -39,6 +40,24 @@ public sealed class TestHttpMessageHandler : HttpMessageHandler
     public void EnqueueResponse(HttpStatusCode statusCode = HttpStatusCode.OK, string body = null, string contentType = "text/plain", params (string Name, string Value)[] headers)
     {
         _responses.Enqueue((request, _) => Task.FromResult(CreateResponse(request, statusCode, body, contentType, headers)));
+    }
+
+    public void EnqueueStalledBodyResponse(TimeSpan stallDuration)
+    {
+        _responses.Enqueue((request, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            RequestMessage = request,
+            Content = new StalledContent(stallDuration)
+        }));
+    }
+
+    public void EnqueueBrokenBodyResponse(HttpStatusCode statusCode = HttpStatusCode.OK)
+    {
+        _responses.Enqueue((request, _) => Task.FromResult(new HttpResponseMessage(statusCode)
+        {
+            RequestMessage = request,
+            Content = new BrokenConnectionContent()
+        }));
     }
 
     public void EnqueueTimeout()
@@ -87,10 +106,11 @@ public sealed class TestHttpMessageHandler : HttpMessageHandler
 
 public sealed class RecordedRequest
 {
-    private RecordedRequest(HttpMethod method, string requestUri, string body, IReadOnlyDictionary<string, string[]> headers)
+    private RecordedRequest(HttpMethod method, Uri uri, string body, IReadOnlyDictionary<string, string[]> headers)
     {
         Method = method;
-        RequestUri = requestUri;
+        Uri = uri;
+        RequestUri = uri?.ToString();
         Body = body;
         Headers = headers;
     }
@@ -98,6 +118,8 @@ public sealed class RecordedRequest
     public HttpMethod Method { get; }
 
     public string RequestUri { get; }
+
+    public Uri Uri { get; }
 
     public string Body { get; }
 
@@ -125,8 +147,94 @@ public sealed class RecordedRequest
 
         return new RecordedRequest(
             request.Method,
-            request.RequestUri?.ToString(),
+            request.RequestUri,
             body,
             headers);
+    }
+}
+
+internal sealed class StalledContent : HttpContent
+{
+    private readonly TimeSpan _stallDuration;
+
+    public StalledContent(TimeSpan stallDuration)
+    {
+        _stallDuration = stallDuration;
+    }
+
+    protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+    {
+        return SerializeToStreamAsync(stream, context, CancellationToken.None);
+    }
+
+    protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context, CancellationToken cancellationToken)
+    {
+        await Task.Delay(_stallDuration, cancellationToken);
+        await stream.WriteAsync(Encoding.UTF8.GetBytes("late"), cancellationToken);
+    }
+
+    protected override async Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken)
+    {
+        await Task.Delay(_stallDuration, cancellationToken);
+        return new MemoryStream(Encoding.UTF8.GetBytes("late"));
+    }
+
+    protected override bool TryComputeLength(out long length)
+    {
+        length = -1;
+        return false;
+    }
+}
+
+internal sealed class BrokenConnectionContent : HttpContent
+{
+    public BrokenConnectionContent()
+    {
+        Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
+    }
+
+    protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+    {
+        throw new IOException("Simulated connection cut.");
+    }
+
+    protected override Task<Stream> CreateContentReadStreamAsync(CancellationToken cancellationToken)
+    {
+        return Task.FromResult<Stream>(new BrokenStream());
+    }
+
+    protected override bool TryComputeLength(out long length)
+    {
+        length = -1;
+        return false;
+    }
+
+    private sealed class BrokenStream : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            throw new IOException("Simulated connection cut.");
+        }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            throw new IOException("Simulated connection cut.");
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

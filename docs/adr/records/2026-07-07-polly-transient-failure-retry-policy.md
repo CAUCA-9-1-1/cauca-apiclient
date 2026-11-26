@@ -37,3 +37,24 @@ Chosen option: **Option A**, because retrying only a known transient set with ex
 - Keep exponential backoff `2^retryAttempt`; `MaxRetryAttemptOnTransientFailure` defaults to 3 and stays overridable by derived services.
 - Keep the policy injectable via `IRetryPolicyBuilder` (`FluentRetryPolicyBuilder` is the default) so tests can substitute it.
 - The retry policy wraps every send inside `FluentBaseService`; do not retry inside individual verb terminals.
+
+## Amendment 2026-11-26: No retry once a status was received
+
+* Status: accepted
+* Date: 2026-11-26
+* Deciders: Cauca.ApiClient maintainers
+* Technical Story: https://github.com/CAUCA-9-1-1/cauca-apiclient/issues/12
+
+### Context
+
+The request timeout now covers reading the response body. Retrying after a failure that happens once a status was received would resend a request the server may already have processed, duplicating non-idempotent calls such as a POST.
+
+### Decision
+
+`IsTransientOrTimeOut` does not retry an `ApiHttpException` flagged as `IsResponseBodyNotReceived`. Only failures before a status was received (and the curated transient status codes) are retried.
+
+### Consequences
+
+* Good: A body-read failure never duplicates a request.
+* Bad: A transient fault while reading a body surfaces immediately instead of recovering.
+

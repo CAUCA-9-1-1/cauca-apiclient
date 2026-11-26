@@ -20,6 +20,21 @@ public class RestResponseValidator
             throw new InternalErrorApiException(url, exception, body);
         if (!answerReceived)
             throw new NoResponseApiException(exception);
+        if (code is not null && !IsSuccess(code.Value))
+            throw new UnexpectedStatusCodeApiException(url, code.Value, exception, body);
         throw exception;
-    }        
+    }
+
+    internal void ThrowExceptionForApiHttpException(ApiHttpException exception)
+    {
+        if (exception.IsResponseBodyNotReceived)
+            throw new ResponseBodyNotReceivedApiException(exception.RequestUri, exception.StatusCode.GetValueOrDefault(), exception);
+
+        ThrowExceptionForStatusCode(exception.RequestUri, exception.AnswerReceived, exception.StatusCode, exception, exception.ResponseBody);
+    }
+
+    private static bool IsSuccess(HttpStatusCode code)
+    {
+        return (int)code is >= 200 and <= 299;
+    }
 }

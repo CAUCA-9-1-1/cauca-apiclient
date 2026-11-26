@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Cauca.ApiClient.Configuration;
@@ -20,6 +21,16 @@ namespace Cauca.ApiClient.Tests.Mocks
         public Task<string> GetMockStringAsync()
         {
             return Request("mock").GetStringAsync();
+        }
+
+        public Task<MockResponse> PostMockAsync(MockEntity entity)
+        {
+            return Request("mock").WithBody(entity).PostAsync<MockResponse>();
+        }
+
+        public Task<Stream> GetMockStreamAsync()
+        {
+            return Request("mock").GetAsync<Stream>();
         }
     }
 }

@@ -25,6 +25,9 @@ public class FluentRetryPolicyBuilder : IRetryPolicyBuilder
 
     private static bool IsTransientOrTimeOut(ApiHttpException exception)
     {
+        if (exception.IsResponseBodyNotReceived)
+            return false;
+
         return IsTransientError(exception) || exception.NoResponse();
     }
 

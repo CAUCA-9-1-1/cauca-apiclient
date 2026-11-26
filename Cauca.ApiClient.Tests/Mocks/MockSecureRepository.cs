@@ -33,5 +33,15 @@ namespace Cauca.ApiClient.Tests.Mocks
                 .WithHeaders(new { Extra = "value" })
                 .GetAsync<MockResponse>();
         }
+
+        public Task<string> GetMockStringAsync()
+        {
+            return Request("mock").GetStringAsync();
+        }
+
+        public Task DeleteMockAsync()
+        {
+            return Request("mock").DeleteAsync();
+        }
     }
 }
