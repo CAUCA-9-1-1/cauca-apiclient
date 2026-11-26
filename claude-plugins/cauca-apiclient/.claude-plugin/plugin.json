@@ -1,0 +1,7 @@
+{
+  "name": "cauca-apiclient",
+  "description": "Skill Claude Code de Cauca.ApiClient (clients HTTP fluides, clients sécurisés, enregistrement DI, migration depuis les classes Flurl). Maintenu avec le code de la librairie et publié par le marketplace cauca-ai-tools.",
+  "author": {
+    "name": "CAUCA"
+  }
+}

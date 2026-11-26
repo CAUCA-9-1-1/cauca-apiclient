@@ -123,7 +123,7 @@ If you still inherit from `BaseService<TConfiguration>` or `BaseSecureService<TC
 
 See [docs/UPGRADING.md](docs/UPGRADING.md) for the detailed migration guide.
 
-The repository also includes AI-oriented migration instructions for assisted refactors:
-
-- [CLAUDE.md](CLAUDE.md)
-- [.github/skills/cauca-apiclient-fluent-migration/SKILL.md](.github/skills/cauca-apiclient-fluent-migration/SKILL.md)
+For AI-assisted work in consuming projects, the Claude Code skill
+[claude-plugins/cauca-apiclient](claude-plugins/cauca-apiclient/skills/cauca-apiclient/SKILL.md)
+covers writing, registering and migrating clients. It is published through the `cauca-ai-tools`
+plugin marketplace.
