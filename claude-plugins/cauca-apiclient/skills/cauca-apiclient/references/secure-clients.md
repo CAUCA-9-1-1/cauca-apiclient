@@ -8,8 +8,8 @@
 1. Before a request, when the instance has no access token: **login**.
 2. On a 401 carrying the `Token-Expired` header: **refresh**, then resend the request once.
 3. When the refresh answers 401 with `Refresh-Token-Expired` or `Token-Invalid`: **login** again.
-4. Any other 401 on the first attempt → `UnauthorizedApiException`. A failure of the **resent**
-   request is not mapped: it escapes as the internal `ApiHttpException` (catch `Exception`).
+4. Any other 401 → `UnauthorizedApiException`. A failure of the **resent** request is mapped like
+   any other (`NotFoundApiException`, `UnexpectedStatusCodeApiException`…).
 
 Each phase (login, request, refresh, re-login, resent request) runs with its own full retry budget.
 

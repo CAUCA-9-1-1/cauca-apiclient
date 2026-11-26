@@ -18,8 +18,11 @@ legacy clients coexist.
    `: base(configuration, policyBuilder, clientFactory, apiPrefix)` (plain) or
    `: base(configuration, clientFactory, apiPrefix)` (secure).
 3. Replace each verb helper with a `Request(...)` chain (table below).
-4. Move path pieces into `AppendSegment(s)` and **every query string out of the URL** into
-   `AddQueryParameter` / `WithQueryParameters`. A query left in the route is dropped silently.
+4. Move path pieces into `AppendSegment(s)`, one piece per segment (each value is escaped, so
+   `AppendSegment("a/b")` sends `a%2Fb`), and query strings into `AddQueryParameter` /
+   `WithQueryParameters`. Remove any `Uri.EscapeDataString` the legacy code applied to path values:
+   the builder escapes them, and escaping twice turns `%20` into `%2520`. A query left in the route
+   still works (it is merged), but the builder escapes values for you.
 5. Replace Flurl-specific code (`IFlurlRequest`, `GenerateRequest` overrides,
    `CapturedMultipartContent`, `FlurlHttpException`) with the builder, `PostFileAsync` and the
    `ApiClientException` family.
@@ -49,14 +52,14 @@ Pass the caller's `CancellationToken` to the new call when the legacy one receiv
 
 | Topic | Legacy | Fluent |
 |---|---|---|
-| Query in the URL string | With a factory: sent as a query. Without: `?` encoded as `%3F` into the path | **Dropped** — move it to query parameters |
+| Query in the URL string | With a factory: sent as a query. Without: `?` encoded as `%3F` into the path | Kept and merged with the builder's parameters (dropped in 4.2.0) |
 | `apiPrefix` | Ignored when no factory was passed | Always applied: the URL can change |
-| Path pieces | Concatenated strings | Segments, slashes trimmed, values not escaped |
+| Path pieces | Concatenated strings | One escaped value per segment, outer `/` trimmed: a `/` inside a value becomes `%2F`; `.` and `..` throw `ArgumentException` |
 | JSON body | Flurl 4 serializer: **PascalCase** names (no naming policy) | camelCase (web defaults): harmless for ASP.NET Core servers, check any other server |
 | `GetAsync<byte[]>` / `PostAsync<byte[]>` | JSON (base64 string) | raw bytes |
 | `PutAsync<string>`, `DeleteAsync<string>`, `PostFileAsync<string>` | JSON-decoded string | raw text, quotes included |
 | `ApiClientException.GetResponseAsync<T>()` | Flurl's JSON reader | `JsonSerializer.Deserialize<T>` without options (case-sensitive) |
-| Unmapped status codes (409, 422, 429, 503…) | `NoResponseApiException` | internal `ApiHttpException`: a `catch (NoResponseApiException)` or `catch (ApiClientException)` no longer matches — catch `Exception` |
+| Unmapped status codes (409, 422, 429, 503…) | `NoResponseApiException` | `UnexpectedStatusCodeApiException` (with `StatusCode`): a `catch (NoResponseApiException)` no longer matches, `catch (ApiClientException)` does |
 | Void call on a secure client after a token refresh | Threw `UnauthorizedApiException` even when the resend succeeded | Returns normally |
 | File upload | Not retried | Retried like any call |
 | `HttpClient` without a factory | Managed by Flurl | `new HttpClient()` per request: always inject `Func<HttpClient>` |

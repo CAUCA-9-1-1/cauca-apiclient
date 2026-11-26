@@ -10,7 +10,7 @@ Implement `Cauca.ApiClient.Configuration.IConfiguration`:
 | `ApiBaseUrlForAuthentication` | Base URL of login and refresh; `null` falls back to `ApiBaseUrl` |
 | `UserId`, `Password` | Credentials of a user login; with `UseExternalSystemLogin`, `UserId` is the API key and `Password` is unused |
 | `UseExternalSystemLogin` | Log in as an external system instead of a user (see [secure-clients.md](secure-clients.md)) |
-| `RequestTimeoutInSeconds` | Time allowed for each attempt to receive the response **headers**. `0` cancels at once: always set it |
+| `RequestTimeoutInSeconds` | Time allowed for each attempt, from sending to the end of the body read. `0` cancels at once: always set it |
 
 `Password` and an external-system API key are secrets. Bind them from the deployment secret store, not
 from a committed `appsettings.json`.
@@ -64,10 +64,11 @@ calls race on the token refresh. Resolve it from a scope per unit of work.
 
 ## Timeouts
 
-`RequestTimeoutInSeconds` bounds each attempt (login and refresh included) only until the response
-headers arrive. The body is read afterwards with the caller's token alone, and the named `HttpClient`
-has an infinite timeout: a server that sends its headers and then stalls blocks the call until the
-caller's token cancels. Always pass a token with a deadline.
+`RequestTimeoutInSeconds` bounds each attempt (login and refresh included), body read included. A
+server that sends its headers and then stalls fails the call with `ResponseBodyNotReceivedApiException`
+(a `NoResponseApiException` with the received `StatusCode`), **without retry**: the server already
+handled the request. The named `HttpClient` has an infinite timeout, so this setting and the caller's
+token are the only bounds. A caller cancelling its token still gets `OperationCanceledException`.
 
 With the default retry policy, one failing phase can take 4 × timeout + 2 + 4 + 8 seconds. A secure
 client may chain several phases (login, request, refresh, re-login, resent request), each with that
@@ -77,7 +78,8 @@ acknowledgment timeout).
 ## Retries
 
 The default `FluentRetryPolicyBuilder` (Polly) retries on 408, 502, 503, 504, a timeout, or no
-response, 3 times, waiting 2, 4 and 8 seconds. It retries **every verb**. Before relying on it for a
+response, 3 times, waiting 2, 4 and 8 seconds. A failure after the status was received (body not
+received) is never retried. It retries **every verb**. Before relying on it for a
 POST, PUT or DELETE, make sure the server treats a repeat as harmless (idempotency key, upsert, natural
 key), or remove the retries for that client.
 

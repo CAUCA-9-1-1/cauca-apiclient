@@ -15,9 +15,11 @@ description: >
 # Cauca.ApiClient
 
 Package `Cauca.ApiClient` 4.2.0, `net10.0` and `net11.0`. Source: the `cauca-apiclient` repository
-(GitHub `CAUCA-9-1-1`), project `Cauca.ApiClient/`. Every fact below was checked against the 4.2.0
-source on 2026-11-26. The repository's `docs/UPGRADING.md` is the migration guide. Where it disagrees
-with this skill, the source wins.
+(GitHub `CAUCA-9-1-1`), project `Cauca.ApiClient/`. Every fact below was checked on 2026-11-26 against
+the 4.2.0 source plus the fixes of issue #12 (route query, segment escaping, exception mapping, body
+timeout), which ship in the first release after 4.2.0. On 4.2.0 itself, read "Still on 4.2.0" below.
+The repository's `docs/UPGRADING.md` is the migration guide. Where it disagrees with this skill, the
+source wins.
 
 New clients inherit `FluentBaseService<TConfiguration>` or `FluentBaseSecureService<TConfiguration>`
 (namespace `Cauca.ApiClient.Services`). `BaseService` and `BaseSecureService` (Flurl) are `[Obsolete]`
@@ -54,8 +56,8 @@ services.AddSecureClient<OrdersClient>(ServiceLifetime.Scoped);
 - `IConfiguration.RequestTimeoutInSeconds` defaults to `0` in any class that does not set it, and `0`
   cancels every request at once: each call fails with `NoResponseApiException` after the retries.
   Always set it.
-- That timeout stops at the response headers. Reading the body has no timeout besides the caller's
-  `CancellationToken`: pass one with a deadline.
+- That timeout covers each whole attempt, body read included. Still pass the caller's token: it is
+  the only bound on the full call (retries and secure-client phases add up).
 - The constructor takes the concrete configuration type. `services.Configure<T>()` alone registers
   only `IOptions<T>`, so the client fails to resolve. Register the concrete instance.
 
@@ -68,10 +70,13 @@ services.AddSecureClient<OrdersClient>(ServiceLifetime.Scoped);
   policy builder.
 
 **Requests**
-- The route given to `Request(...)` must not contain a query string: the builder rebuilds the query
-  from its own parameters and **silently drops** `?a=1` written in the route.
-- Segments are not escaped by the builder. A `/`, `?` or `#` inside a value changes the URL. Escape
-  free-text values with `Uri.EscapeDataString`.
+- A query string written in the route (`Request("orders?status=open")`) is kept and merged with the
+  builder's parameters; a builder parameter of the same name (case-insensitive) replaces it, a `null`
+  one removes it. Prefer the builder methods anyway.
+- Each segment is trimmed of leading and trailing `/`, then escaped with `Uri.EscapeDataString`: one
+  value is exactly one segment (`AppendSegment("a/b")` → `a%2Fb`). Do **not** pre-escape: `%` becomes
+  `%25`. Pass several path pieces as `AppendSegments("a", "b")`. A segment equal to `.` or `..` throws
+  `ArgumentException`. Segments go into the path even when the route holds a query.
 - Query values go through `Convert.ToString(value, InvariantCulture)`. Collections are not expanded
   (`ids=System.Collections.Generic.List...`), one key holds one value, and a `DateTime` comes out as
   `MM/dd/yyyy HH:mm:ss`. Pre-format dates (`"O"`) and avoid collection parameters.
@@ -83,11 +88,14 @@ services.AddSecureClient<OrdersClient>(ServiceLifetime.Scoped);
 **Errors and retries**
 - 400, 401, 403, 404 and 500 become `BadParameterApiException`, `UnauthorizedApiException`,
   `ForbiddenApiException`, `NotFoundApiException` and `InternalErrorApiException`; no response becomes
-  `NoResponseApiException`. Any **other** status (409, 422, 429, 503 after retries…) is thrown as the
-  internal `ApiHttpException`, which callers cannot catch by type: catch `Exception` at the boundary.
-  On a secure client, a request resent after a token refresh is not mapped at all.
+  `NoResponseApiException`. Any **other** non-2xx status (409, 422, 429, 503 after retries…) becomes
+  `UnexpectedStatusCodeApiException`, whose `StatusCode` property holds the code. All derive from
+  `ApiClientException`; the request resent after a token refresh is mapped the same way.
 - The default policy retries 408, 502, 503, 504 and timeouts 3 times (2 s, 4 s, 8 s) for **every**
   verb, POST included. A non-idempotent call can run twice on the server.
+- When the status arrived but the body did not (timeout or connection cut while reading it), the call
+  is **not** retried and throws `ResponseBodyNotReceivedApiException` (a `NoResponseApiException`
+  carrying the received `StatusCode`): the server accepted the call, so do not blindly resend it.
 - `ApiClientException.GetResponseAsync<T>()` deserializes the error body with default
   `JsonSerializer` options: property names are **case-sensitive**, unlike the client's own reads.
 
@@ -95,6 +103,14 @@ services.AddSecureClient<OrdersClient>(ServiceLifetime.Scoped);
 - The token lives in the client instance. `AddSecureClient` refuses `Singleton`; with the default
   `Transient` lifetime, every resolved instance logs in again. Prefer `Scoped` in a web API and one
   instance per unit of work in a worker.
+
+## Still on 4.2.0
+
+Until a consumer upgrades past 4.2.0, these 4.2.0 behaviours apply instead: a query in the route is
+**dropped**; segments are **not escaped** (escape free text yourself); unmapped status codes and any
+failure of a request resent after a token refresh escape as the internal `ApiHttpException` (catch
+`Exception`); `RequestTimeoutInSeconds` stops at the response headers, so a stalled body blocks until
+the caller's token cancels.
 
 ## Before production
 
